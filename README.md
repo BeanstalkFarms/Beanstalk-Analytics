@@ -44,3 +44,7 @@ query MyQuery {
   }
 }
 ```
+
+## Subgrounds Issues 
+
+- No support for inline fragments
