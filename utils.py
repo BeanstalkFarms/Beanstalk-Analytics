@@ -1,7 +1,15 @@
-import pandas as pd 
+import os 
+from typing import Tuple 
+
+# import pandas as pd 
+from dotenv import load_dotenv
+from subgrounds.subgrounds import Subgrounds, Subgraph
 from pandas import DataFrame
 from IPython.display import display 
 from IPython.core.display import HTML
+
+load_dotenv()
+
 
 def all_attrs(value, ignore_keys=None): 
     # Retrieves all non private / builtin attributes of an object as a list 
@@ -34,3 +42,8 @@ def ddf(df: DataFrame, **kwargs):
         show_dimensions=True
     )
     return display(HTML(df.to_html(**kwargs)))
+
+def load_subgraph() -> Tuple[Subgrounds, Subgraph]: 
+    sg = Subgrounds()
+    bs: Subgraph = sg.load_subgraph(os.environ['SUBGRAPH_URL'])
+    return sg, bs 
