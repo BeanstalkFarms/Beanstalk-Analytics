@@ -1,5 +1,5 @@
 import os 
-from typing import Tuple 
+from typing import Tuple, Dict 
 
 # import pandas as pd 
 from dotenv import load_dotenv
@@ -10,6 +10,8 @@ from IPython.core.display import HTML
 
 load_dotenv()
 
+def remove_keys(d: Dict, rm_keys): 
+    return {k: v for k, v in d.items() if k not in rm_keys}
 
 def all_attrs(value, ignore_keys=None): 
     # Retrieves all non private / builtin attributes of an object as a list 
