@@ -37,23 +37,13 @@ class HandlerExternal:
         """Generic API handler that will route all incoming requests to the appropriate 
         internal handler function. Each internal handler function produces a JSON object 
         representing a compiled vega schema. Urls to reach this handler will be of the 
-        following form 
-
-        /api/chart?name=<chart_name>&timestamp=<timestamp>
-
-        Including the timestamp within the querystring forces browsers to re-request 
-        data for the chart on each page load (as the timestamp will be different). 
-
-        "It's okay if the site re-requests raw data from the CDN on each page load IMO. 
-        Treating the static files as a sort of cheap API" - SiloChad
+        following form /api/chart?name=<chart_name>
 
         Args: 
             req: Request object (incoming from UI client)
         Returns: 
             resp: Response object (outgoing to UI client)
         """
-        # Generic handler for all incoming requests. 
-        # Endpoint would be something like 
         name = req.name 
         handler = getattr(HandlersInternal, name)
         if not handler: 
