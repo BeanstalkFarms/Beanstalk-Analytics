@@ -1,7 +1,7 @@
 import os
 from gcp_storage_emulator.server import create_server
 
-bucket = os.environ["STORAGE_BUCKET_NAME"]
+bucket = os.environ["NEXT_PUBLIC_STORAGE_BUCKET_NAME"]
 server = create_server(
   "localhost",
   9023,
