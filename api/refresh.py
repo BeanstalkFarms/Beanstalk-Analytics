@@ -4,6 +4,14 @@ import nbformat
 from nbclient import NotebookClient
 from google.cloud import storage
 
+storage_client = storage.Client()
+bucket = storage_client.bucket(os.environ["STORAGE_BUCKET_NAME"])
+
+def save(name, data):
+  blob = bucket.blob(name)
+  blob.upload_from_string(data)
+  return
+
 class handler(BaseHTTPRequestHandler):
   def do_GET(self):
     nb = nbformat.read("notebooks/Fertilizer.ipynb", as_version=4)
@@ -15,10 +23,7 @@ class handler(BaseHTTPRequestHandler):
       self.send_header('Content-type','text/plain')
       self.end_headers()
       self.wfile.write("success".encode())
-      storage_client = storage.Client()
-      bucket = storage_client.bucket("beanstalk-analytics-schemas")
-      blob = bucket.blob("test.json")
-      blob.upload_from_string("{}")
+      save("test.json", "{}")
       return
     except Exception as e:
       self.send_response(500)

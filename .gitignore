@@ -42,3 +42,4 @@ public/schemas
 .ipynb_checkpoints/
 .DS_Store
 .vscode
+.cloudstorage
