@@ -14,6 +14,7 @@ notebook = "*"
 python-dotenv = "*"
 python-box = "*"
 python-graphql-client = "*"
+google-cloud-storage = "*"
 
 [dev-packages]
 

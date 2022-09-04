@@ -2,6 +2,7 @@ from http.server import BaseHTTPRequestHandler
 import os
 import nbformat
 from nbclient import NotebookClient
+from google.cloud import storage
 
 class handler(BaseHTTPRequestHandler):
   def do_GET(self):
@@ -14,6 +15,10 @@ class handler(BaseHTTPRequestHandler):
       self.send_header('Content-type','text/plain')
       self.end_headers()
       self.wfile.write("success".encode())
+      storage_client = storage.Client()
+      bucket = storage_client.bucket("beanstalk-analytics-schemas")
+      blob = bucket.blob("test.json")
+      blob.upload_from_string("{}")
       return
     except Exception as e:
       self.send_response(500)
