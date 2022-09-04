@@ -8,7 +8,10 @@ from pandas import DataFrame
 from IPython.display import display 
 from IPython.core.display import HTML
 
-load_dotenv()
+# temp fix. 
+load_dotenv("../../.env")
+SUBGRAPH_URL = os.environ['SUBGRAPH_URL']
+
 
 def remove_keys(d: Dict, rm_keys): 
     return {k: v for k, v in d.items() if k not in rm_keys}
@@ -47,5 +50,5 @@ def ddf(df: DataFrame, **kwargs):
 
 def load_subgraph() -> Tuple[Subgrounds, Subgraph]: 
     sg = Subgrounds()
-    bs: Subgraph = sg.load_subgraph(os.environ['SUBGRAPH_URL'])
+    bs: Subgraph = sg.load_subgraph(SUBGRAPH_URL)
     return sg, bs 

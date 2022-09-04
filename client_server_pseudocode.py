@@ -51,13 +51,16 @@ class HandlerExternal:
         filename_regex = rf".*-{name}.json" # this will be changed to more accurately capture valid names prefixed with dates. 
         file, recompute, invalidate_cache = self.get_file(filename_regex)
         if invalidate_cache: 
+            # Is this a blocking or asynchronous request? 
             cdn.invalidate_cache(file.name)
         if recompute: 
             try: 
                 timestamp = datetime.now() 
                 new_filename = f"{timestamp}-{name}.json"
                 new_schema = handler() 
-                aws.s3.write(new_filename, new_schema)
+                data = {"timestamp": timestamp, "schema": new_schema}
+                # I think this is blocking call but not 100% sure.
+                aws.s3.write(new_filename, data)
             except BaseException as e: 
                 return {"code": 501, "message": e.msg}
             return {"code": 200, "status": "refreshed", "filename": new_filename}
