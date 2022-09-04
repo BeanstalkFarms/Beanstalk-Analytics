@@ -6,5 +6,3 @@ editor on the left hand side.
 
 Sometimes, the chart doesn't show up until you press the *fullscreen* icon in the 
 upper right hander corner of the UI, so make sure to try this if you don't see it. 
-
-asdfsdf
