@@ -1,0 +1,12 @@
+nbclient
+subgrounds
+numpy
+pandas
+altair
+nbformat
+notebook
+python-dotenv
+python-box
+python-graphql-client
+google-cloud-storage
+functions-framework==3.*
