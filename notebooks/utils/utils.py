@@ -1,7 +1,7 @@
 import os 
 from typing import Tuple, Dict 
 
-# import pandas as pd 
+import pandas as pd 
 from dotenv import load_dotenv
 from subgrounds.subgrounds import Subgrounds, Subgraph
 from pandas import DataFrame
@@ -12,19 +12,27 @@ from IPython.core.display import HTML
 load_dotenv("../../.env")
 SUBGRAPH_URL = os.environ['SUBGRAPH_URL']
 
+def dict_invert(d: Dict): 
+    """Inverts the key value mapping of a dict."""
+    return {v: k for k, v in d.items()}
 
 def remove_keys(d: Dict, rm_keys): 
+    """Returns dict with all keys in rm_keys removed."""
     return {k: v for k, v in d.items() if k not in rm_keys}
 
-def all_attrs(value, ignore_keys=None): 
-    # Retrieves all non private / builtin attributes of an object as a list 
-    # Useful for querying all entity properties for subgrounds field paths 
+def all_attrs(obj, ignore_keys=None): 
+    """Retrieves list of all non private / builtin attributes of an object.
+    
+    Useful for getting all properties of a subgrounds query entity, rather 
+    than specifying which subset of data properties to query for. 
+    """
     ignore_keys = ignore_keys or []
-    attrs = []
-    for key in dir(value): 
-        if not (key.startswith("_") or key.startswith("__") or key in ignore_keys): 
-            attrs.append(getattr(value, key))
-    return attrs
+    return [
+        getattr(obj, attr) for attr in dir(obj)
+        if not (
+            attr.startswith("_") or attr.startswith("__") or attr in ignore_keys
+        )
+    ]
 
 def filter_by_prefix(df: DataFrame, prefix: str): 
     # Remove all columns that don't start with prefix 
@@ -48,7 +56,12 @@ def ddf(df: DataFrame, **kwargs):
     )
     return display(HTML(df.to_html(**kwargs)))
 
-def load_subgraph() -> Tuple[Subgrounds, Subgraph]: 
+
+def load_subgraph(subgraph_host=None, subgraph_type=None) -> Tuple[Subgrounds, Subgraph]: 
+    """Helper for initializing subgrounds and subgraph objects. 
+    
+    TODO: arg to select from different subgraph url's
+    """
     sg = Subgrounds()
     bs: Subgraph = sg.load_subgraph(SUBGRAPH_URL)
     return sg, bs 
