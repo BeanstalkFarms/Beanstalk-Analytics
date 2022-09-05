@@ -12,6 +12,7 @@ from IPython.core.display import HTML
 load_dotenv("../../.env")
 SUBGRAPH_URL = os.environ['SUBGRAPH_URL']
 
+print(SUBGRAPH_URL)
 
 def remove_keys(d: Dict, rm_keys): 
     return {k: v for k, v in d.items() if k not in rm_keys}
