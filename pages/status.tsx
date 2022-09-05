@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import type { NextPage } from 'next'
-import CallsModule from '../components/CallsModule';
+import CallsModule from '../components/v1/CallsModule';
 import { ethers } from 'ethers';
 import Sunrises from '../components/Sunrises';
 import FertQueue from '../components/FertQueue';
 import { Storage } from '../generated/Beanstalk'; 
-import Page from '../components/layout/Page';
+import Page from '../components/v1/layout/Page';
 
 const BEAN            = "0xBEA0000029AD1c77D3d5D23Ba2D8893dB9d1Efab";
 const BEANCRV3        = "0xc9C32cd16Bf7eFB85Ff14e0c8603cc90F6F2eE49";

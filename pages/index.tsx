@@ -1,43 +1,91 @@
 import { NextPage } from "next";
 import { useEffect, useState } from "react";
 import { VegaLite } from 'react-vega';
+import Module from "../components/Module";
+import Page from "../components/Page";
 
 if (!process.env.NEXT_PUBLIC_STORAGE_BUCKET_NAME) throw new Error('Environment: Missing bucket');
 if (!process.env.NEXT_PUBLIC_CDN) throw new Error('Environment: Missing CDN address'); 
 
 const bucketUrl = new URL(`${process.env.NEXT_PUBLIC_CDN}/${process.env.NEXT_PUBLIC_STORAGE_BUCKET_NAME}`);
 
-const Chart : React.FC<{ name: string }> = ({ name }) => {
+const Chart : React.FC<{ name: string; height?: number; }> = ({ name, height = 300 }) => {
   const [spec, setSpec] = useState<null | object>(null);
+  const [status, setStatus] = useState<'loading' | 'error' | 'ready'>('loading');
   
   useEffect(() => {
     (async () => {
       const url = new URL(`${bucketUrl}/${name}.json`);
-      console.log(`Fetching: ${url}`)
       try {
         setSpec(
-          await fetch(url.toString()).then((r) => r.json())
+          await fetch(url.toString())
+            .then((r) => r.json())
         )
+        setStatus('ready');
       } catch(e) {
         console.error(e);
+        setStatus('error');
       }
     })()
   }, [])
 
-  if (!spec) {
-    return <>Loading</>;
+  if (status === 'loading') {
+    return (
+      <div className="flex items-center justify-center" style={{ height }}>
+        Loading...
+      </div>
+    );
+  }
+
+  if (status === 'error' || !spec) {
+    return (
+      <div className="flex items-center justify-center" style={{ height }}>
+        Something went wrong while loading chart {name}.
+      </div>
+    );
   }
 
   return (
-    <VegaLite spec={spec} />
+    <div>
+      <div className="p-2"><h4 className="font-bold">{name}</h4></div>
+      <div className="flex items-center justify-center">
+        <VegaLite spec={spec} height={height} />
+      </div>
+    </div>
   )
 }
 
 const Home: NextPage = () => {
   return (
-    <div>
-      <Chart name="Fertilizer" />
-    </div>
+    <Page>
+      <div className="block md:grid md:grid-cols-6 gap-4 m-4">
+        <div className="col-span-6">
+          <Module>
+            <Chart name="Fertilizer" />
+          </Module>
+        </div>
+        <div className="col-span-6">
+          <Module>
+            <Chart name="Field" />
+          </Module>
+        </div>
+        <div className="col-span-6">
+          <Module>
+            <Chart name="Liquidity" />
+          </Module>
+        </div>
+        <div className="col-span-6">
+          <Module>
+            <Chart name="Silo" />
+          </Module>
+        </div>
+        <div className="col-span-6">
+          <Module>
+            <Chart name="Creditworthiness" />
+          </Module>
+        </div>
+      </div>
+    </Page>
   );
 }
 

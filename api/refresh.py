@@ -15,7 +15,11 @@ def upload(name, data):
   return
 
 NOTEBOOKS = {
-  "Fertilizer"
+  "Fertilizer",
+  "Field",
+  "Liquidity",
+  "Silo",
+  "Creditworthiness"
 }
 
 class handler(BaseHTTPRequestHandler):

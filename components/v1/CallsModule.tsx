@@ -2,9 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { Contract } from 'ethers-multicall';
 import { ethers } from 'ethers';
 
-import contracts from '../lib/contracts';
-import { Beanstalk } from '../generated';
-import { ethcallProvider } from '../lib/provider';
+import contracts from '../../lib/contracts';
+import { Beanstalk } from '../../generated';
+import { ethcallProvider } from '../../lib/provider';
 import Module from './Module';
 
 type ModuleSlot = [
