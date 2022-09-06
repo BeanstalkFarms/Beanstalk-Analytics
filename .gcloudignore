@@ -1,0 +1,2 @@
+# Only upload processed notebooks 
+serverless/notebooks/**

@@ -1,6 +1,6 @@
 <img src="public/bean-logo-circled.svg" alt="Beanstalk logo" align="right" width="120" />
 
-## Beanstalk-Data-Playground
+# Beanstalk-Data-Playground
 
 [![Discord][discord-badge]][discord-url]
 
@@ -9,14 +9,110 @@
 
 **Beanstalk analytics and protocol metrics: [analytics.bean.money](https://analytics.bean.money)**
 
-## Getting started
+## Application Architecture 
 
-Install Python dependencies with `pipenv`:
+This application consists of
+- A frontend application (next.js) in `pages/`.
+- A backend in `serverless` consisting of 
+  - Object storage (GCP storage). 
+  - Serverless compute (GCP cloud functions). 
+    - The single api endpoint for the application exists within `serverless/main.py`.
+      - This endpoint is a multipliexer, selecting and executing one of the notebooks in 
+      `serverless/notebooks_processed/`. Once the notebook is executed, it's output is 
+      extracted and written to GCP Storage. JSON objects representing compiled vega 
+      schemas for charts to be visualized in the frontend are stored in this bucket. 
 
+### Prerequisites
+
+Developers will need to do the following 
+- Setup a [GCloud Account](https://cloud.google.com/). 
+  - Ensure that you enable billing for your account. GCloud gives new users $300 in free credits so 
+  you won't actually be charged unless you surpass this amount of credit, which is hard to do. 
+- Create a project within your GCloud account for developing this application. 
+- Install and authenticate the [GCloud CLI](https://cloud.google.com/sdk/docs/install). 
+
+### Backend 
+
+The backend consists of GCP storage buckets and GCP cloud functions. 
+
+#### Storage 
+
+To run the application either in production or in a development setting where data is read from 
+and written to cloud storage, the user will need to set up a GCP storage bucket. 
+
+Contributors who are only concerned with implementing new charts do not need to set
+up their own bucket. Instead, they can use the GCP storage emulator to simulate writing 
+to and reading from a bucket. 
+
+##### GCP Storage Setup 
+
+1. Within the project you created earlier, go to `Cloud Storage` and then `buckets`. 
+2. Create a bucket with 
+   1. Region: `us-east1` 
+   2. Storage Class: `default` 
+   3. Public Access: ` Public to internet` 
+   4. Access Control: `Uniform`
+   This bucket will store all data for the application 
+3. Go to the bucket's permission settings and add a new IAM permission.
+   1. Principal: `allUsers` 
+   2. Role: `Storage Object Viewer`
+   This enables anyone to view the contents of the buckets. 
+   TODO: Can we make this more restrictive in some way but still enable all 
+   clients to view the contents of the buckets? 
+4. Go to `IAM & Admin` and then `Service Accounts`. 
+   1. Create a new service account. 
+   2. Generate and download a key for this service account (a JSON file).
+   This service account will be used by the serverless function to write 
+   data to the bucket created earlier. 
+5. Go to the bucket's permission settings and add a new IAM permission.
+   1. Principal: `SERVICE_ACCOUNT_ID` (the id of the service account created in step 4) 
+   2. Role: `Storage Object Admin`
+   This enables to serverless function to write to the bucket. 
+6. Enter the google cloud shell 
+   1. Run `nano cors.json` amd paste in the value contained in `cors.json` in this repo.
+   2. Run `gsutil cors set cors.json gs://BUCKET_NAME`.
+   This ensures that bucket resources are accessible from any origin. 
+
+##### GCP Cloud Functions Setup 
+
+There is a single serverless function used as the entrypoint for this 
+application. The function is `beanstalk_analytics_handler` in 
+`serverless/main.py`. This function chooses the appropriate notebook 
+to execute, then runs it, extracts its output, then writes it to GCP 
+storage. 
+
+To deploy this function, run 
+
+```bash 
+python scripts/deploy_cloud_function.py
 ```
-pipenv install
-# Or: python3 -m pipenv install
+
+This function wraps the `gcloud functions deploy` command, and performs
+some pre-processing and data manipulation logic. 
+
+After deploying the serverless function, run the following command in the 
+GCP shell to test that it is working as expected. 
+
+```bash 
+curl -m 70 -X GET https://us-east1-tbiq-beanstalk-analytics.cloudfunctions.net/beanstalk_analytics_handler?name=field \
+-H "Authorization: bearer $(gcloud auth print-identity-token)"
 ```
+
+The request should return a `200` status code and there should be a new object
+called `Field.json` in the GCP storage bucket. 
+
+```bash
+functions-framework --target=beanstalk_analytics_handler
+```
+
+```bash 
+curl "http://localhost:8080/api?name=field"
+```
+
+
+TODO: Notes on service account access for this function. 
+
+### Frontend 
 
 Install Next.js dependencies:
 
@@ -30,7 +126,6 @@ Setup local environment:
 2. If using an emulator for development, set `NEXT_PUBLIC_CDN` and `STORAGE_EMULATOR_HOST` to point to a local Cloud Storage emulator. A simple proxy is provided via `yarn emulate`, see `test/emulate.py` for more.
 3. If testing uploads to a live Cloud Storage bucket: set `NEXT_PUBLIC_STORAGE_BUCKET_NAME` and `GOOGLE_APPLICATION_CREDENTIALS`. You'll need to create a bucket which allows public and a service account with permission to upload files, see below.
 
-
 Run the local development environment:
 
 ```
@@ -38,19 +133,7 @@ yarn dev     # Runs the frontend at localhost:3000
 yarn emulate # Runs the gcloud emulator at localhost:9023
 ```
 
-## Setting up a test bucket
-
-1. Set up a Google Cloud account.
-2. Create a new project.
-3. Create a storage bucket. Uncheck the option that prevents the bucket from being exposed to publicly.
-4. Add a role for `allUsers` that enables viewing objects.
-5. Create a service account with permissions to upload to the bucket:
-  a. Create a service account.
-  b. Add a key to the service account and save it locally.
-  c. On the Bucket, give the service account permission to create and update objects.
-  d. Update environment config to point `GOOGLE_APPLICATION_CREDENTIALS` at the location of the locally stored service account key.
-6. Use the Google Cloud Shell to set bucket CORS policy:
-  a. Open Google Cloud Shell.
-  b. Run `nano cors.json` amd paste in the value contained in `cors.json` in this repo.
-  c. Run `gsutil cors set cors.json gs://BUCKET_NAME`.
-  d. Resources on the bucket are now accessible from any origin.
+TODO's: 
+- Minify the supply increase file 
+- Ensure that the notebooks directory is not included in cloud functions deployment 
+- 

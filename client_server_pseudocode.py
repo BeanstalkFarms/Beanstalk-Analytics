@@ -86,3 +86,6 @@ class HandlerExternal:
             # No file exists so we compute schema but no need to invalidate cache. 
             recompute, invalidate_cache = True, False  
         return file, recompute, invalidate_cache
+
+
+

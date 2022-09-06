@@ -5,8 +5,9 @@ pandas
 altair
 nbformat
 notebook
-python-dotenv
+python-dotenv # TODO: dev dependency 
 python-box
-python-graphql-client
+python-graphql-client # TODO: remove 
 google-cloud-storage
 functions-framework==3.*
+pyyaml # TODO: dev dependency 

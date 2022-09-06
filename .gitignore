@@ -43,3 +43,5 @@ public/schemas
 .DS_Store
 .vscode
 .cloudstorage
+
+**/__pycache__/
