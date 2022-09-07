@@ -11,6 +11,8 @@ import nbformat
 from nbformat.v4 import new_code_cell, new_notebook
 from dotenv import dotenv_values
 
+from process_notebooks import process_notebooks
+
 environ = dotenv_values()
 
 SERVERLESS_DEPLOY_PATH = Path(environ['SERVERLESS_DEPLOY_PATH'])
@@ -27,37 +29,6 @@ def copy_requirements_file():
     shutil.copyfile("requirements.txt", fpath_new)
     yield 
     os.remove(fpath_new)
-
-
-def process_notebooks(): 
-    """Processes jupyter notebooks 
-
-    - Combines all code cells into single code cell 
-        - This removes intermediate data outputs within the notebook 
-        when executing the serverless function, saving significant memory.
-    - This code should be run automatically before deploying serverless function
-    """
-    path_notebooks = Path(environ['NOTEBOOK_DIR_PATH'])
-    path_notebooks_processed = Path(environ['NOTEBOOK_PROCESSED_DIR_PATH'])
-
-    # Clear processed notebooks directory 
-    if path_notebooks_processed.exists(): 
-        shutil.rmtree(path_notebooks_processed)
-    # Copy tree rooted at notebooks directory. We want to retain 
-    # all other non-notebook files as dependencies. 
-    shutil.copytree(path_notebooks, path_notebooks_processed)
-
-    # Overwrite copied notebooks with processed notebooks. 
-    for fpath in path_notebooks.iterdir(): 
-        if fpath.suffix == '.ipynb': 
-            nb = nbformat.read(fpath, as_version=4)
-            src = '\n'.join(
-                [c['source'] for c in nb['cells'] if c['cell_type'] == 'code']
-            )
-            new_fpath = path_notebooks_processed / fpath.name 
-            new_nb = new_notebook(cells=[new_code_cell(cell_type="code", source=src)])
-            print(f"Converting {str(fpath):<50} -> {new_fpath}")
-            nbformat.write(new_nb, new_fpath)
 
 
 @contextmanager

@@ -15,7 +15,7 @@ const Chart : React.FC<{ name: string; height?: number; }> = ({ name, height = 3
   
   useEffect(() => {
     (async () => {
-      const url = new URL(`${bucketUrl}/${name}.json`);
+      const url = new URL(`${bucketUrl}/${name.toLowerCase()}.json`);
       try {
         setSpec(
           await fetch(url.toString())
@@ -61,29 +61,29 @@ const Home: NextPage = () => {
       <div className="block md:grid md:grid-cols-6 gap-4 m-4">
         <div className="col-span-6">
           <Module>
-            <Chart name="Fertilizer" />
+            <Chart name="BeanstalkCreditworthiness" />
           </Module>
         </div>
         <div className="col-span-6">
           <Module>
-            <Chart name="Field" />
+            <Chart name="FarmersMarketHistory" />
           </Module>
         </div>
         <div className="col-span-6">
           <Module>
-            <Chart name="Liquidity" />
+            <Chart name="FertilizerBreakdown" />
           </Module>
         </div>
         <div className="col-span-6">
           <Module>
-            <Chart name="Silo" />
+            <Chart name="FieldOverview" />
           </Module>
         </div>
-        <div className="col-span-6">
+        {/* <div className="col-span-6">
           <Module>
             <Chart name="Creditworthiness" />
           </Module>
-        </div>
+        </div> */}
       </div>
     </Page>
   );

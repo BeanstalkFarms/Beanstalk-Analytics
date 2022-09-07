@@ -106,13 +106,12 @@ The request should return a `200` status code and there should be a new object
 called `Field.json` in the GCP storage bucket. 
 
 ```bash
-functions-framework --target=beanstalk_analytics_handler
+functions-framework --target=beanstalk_analytics_handler --debug 
 ```
 
 ```bash 
 curl "http://localhost:8080/api?name=field"
 ```
-
 
 TODO: Notes on service account access for this function. 
 
@@ -139,8 +138,8 @@ yarn emulate # Runs the gcloud emulator at localhost:9023
 
 ##### TODO's: 
 
-- Minify the supply increase file 
-- Ensure that the notebooks directory is not included in cloud functions deployment 
+###### High 
+
 - Re-architecture of service account for cloud function 
   - Currently, we deploy a service account key file with the cloud function
   and set a runtime environment variable to point to this key file. 
@@ -160,4 +159,15 @@ yarn emulate # Runs the gcloud emulator at localhost:9023
      - https://cloud.google.com/iam/docs/impersonating-service-accounts#impersonate-sa-level
      I should be able to impersonate the service account locally when running my local dev 
      stack for google cloud functions. 
-   
+
+###### Medium 
+
+- Serverless source code deployment 
+  - Minify the supply increase file. 
+    - This is about 1/5 the bundle size right now. Would allow for viewing source online in the GCP console. 
+  - Ensure that the notebooks directory is not included in cloud functions deployment 
+
+###### Low 
+
+- Investigate how much we can speed up execution time by converting 
+  the notebooks into scripts. 

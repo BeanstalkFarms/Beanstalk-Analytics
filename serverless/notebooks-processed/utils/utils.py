@@ -1,12 +1,15 @@
 import os 
+import json
 from typing import Tuple, Dict 
 
 # import pandas as pd 
+import altair as alt 
 from dotenv import load_dotenv
 from subgrounds.subgrounds import Subgrounds, Subgraph
 from pandas import DataFrame
 from IPython.display import display 
 from IPython.core.display import HTML
+from IPython.display import JSON
 
 # temp fix. 
 load_dotenv("../../.env")
@@ -53,3 +56,6 @@ def load_subgraph() -> Tuple[Subgrounds, Subgraph]:
     sg = Subgrounds()
     bs: Subgraph = sg.load_subgraph(SUBGRAPH_URL)
     return sg, bs 
+
+def output_chart(c: alt.Chart): 
+    return JSON(json.loads(c.to_json()))
