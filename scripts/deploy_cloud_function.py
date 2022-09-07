@@ -101,6 +101,5 @@ with (
     create_env_file(GCLOUD_DEPLOY_ENV_FILE),
 ): 
     subprocess.run(
-        [c.strip() for c in shlex.split(cmd)], 
-        stderr=sys.stderr, stdout=sys.stdout
+        [c.strip() for c in shlex.split(cmd)], stderr=sys.stderr, stdout=sys.stdout
     )
