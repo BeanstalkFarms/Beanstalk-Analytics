@@ -33,17 +33,6 @@ def log_runtime(fn):
     return wrapped 
 
 
-class CDNClient: 
-
-    def __init__(self): 
-        self.service = discovery.build('compute', 'v1', credentials=CREDENTIALS)
-
-    def invalidate(self, path: str):
-        request = self.service.urlMaps().invalidateCache(project=PROJECT_ID, urlMap='http-lb', body={"path": path})
-        response = request.execute()
-        return response 
-
-
 class StorageClient: 
 
     def __init__(self) -> None:

@@ -2,7 +2,7 @@ import logging
 import time 
 from collections import defaultdict
 
-from src.utils import NotebookRunner
+from src_py.src.utils import NotebookRunner
 
 # disable logs 
 logging.basicConfig(level=logging.CRITICAL)

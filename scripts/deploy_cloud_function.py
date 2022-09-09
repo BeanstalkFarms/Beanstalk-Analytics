@@ -7,8 +7,6 @@ from contextlib import contextmanager
 from pathlib import Path 
 
 import yaml 
-import nbformat
-from nbformat.v4 import new_code_cell, new_notebook
 from dotenv import dotenv_values
 
 from process_notebooks import process_notebooks
