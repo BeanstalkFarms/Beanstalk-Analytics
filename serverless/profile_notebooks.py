@@ -4,6 +4,7 @@ from collections import defaultdict
 
 from src.utils import NotebookRunner
 
+# disable logs 
 logging.basicConfig(level=logging.CRITICAL)
 
 num_iters = 3

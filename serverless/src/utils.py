@@ -2,16 +2,23 @@ import os
 import json 
 import logging 
 import time 
+import datetime 
 from functools import wraps
 from typing import Dict, Tuple, List, Optional
 from pathlib import Path 
 
 import nbformat
 from nbclient import NotebookClient
+from google.api_core.exceptions import NotFound
 from google.cloud import storage 
+from googleapiclient import discovery
+import google.auth 
 
 
 logger = logging.getLogger(__name__)
+
+BUCKET_NAME = os.environ["NEXT_PUBLIC_STORAGE_BUCKET_NAME"]
+CREDENTIALS, PROJECT_ID = google.auth.load_credentials_from_file(os.environ['GOOGLE_APPLICATION_CREDENTIALS'])
 
 
 def log_runtime(fn): 
@@ -26,22 +33,45 @@ def log_runtime(fn):
     return wrapped 
 
 
+class CDNClient: 
+
+    def __init__(self): 
+        self.service = discovery.build('compute', 'v1', credentials=CREDENTIALS)
+
+    def invalidate(self, path: str):
+        request = self.service.urlMaps().invalidateCache(project=PROJECT_ID, urlMap='http-lb', body={"path": path})
+        response = request.execute()
+        return response 
+
+
 class StorageClient: 
 
     def __init__(self) -> None:
-        self.client = storage.Client(project="tbiq-beanstalk-analytics")
-        self.bucket = self.client.bucket(os.environ["NEXT_PUBLIC_STORAGE_BUCKET_NAME"])
+        self.client = storage.Client(project=PROJECT_ID, credentials=CREDENTIALS)
+        self.bucket = self.client.bucket(BUCKET_NAME)
+
+    def get_blob(self, name: str, cur_dtime: datetime.datetime): 
+        blob = self.bucket.blob(name)
+        exists = True 
+        try: 
+            # ensures object metadata present, as blob doesn't load everything
+            blob.reload()
+            obj_dtime = blob.time_created
+            age_seconds = (cur_dtime - obj_dtime).total_seconds()
+        except NotFound as e: 
+            exists = False 
+            age_seconds = None 
+        return blob, exists, age_seconds
 
     @log_runtime
-    def upload(self, name: str, data: str) -> None: 
-        blob = self.bucket.blob(name)
+    def upload(self, blob, data: str) -> None: 
         blob.upload_from_string(data, retry=None)
         return 
 
 
 class NotebookRunner: 
 
-    def __init__(self, storage_client: Optional[StorageClient] = None): 
+    def __init__(self): 
         self.path_notebooks = Path('./notebooks-processed')
         self.ntbk_name_path_map: Dict[str, str] = {
             # Allows for case insensitive matchine of chart names 
@@ -49,7 +79,6 @@ class NotebookRunner:
             for nb_path in self.path_notebooks.iterdir() 
             if nb_path.suffix == '.ipynb'
         }
-        self.storage_client = storage_client
 
     @property
     def names(self) -> List[str]: 
@@ -95,15 +124,3 @@ class NotebookRunner:
             }:
                 return nb_name, nb_output_json 
         raise ValueError("Notebook executed but output form was incorrect.")
-
-    @log_runtime
-    def execute_upload_many(self, nb_names: List[str]): 
-        """Executes one or more notebooks and uploads their outputs to GCP storage."""
-        for nb_name in nb_names:  
-            logging.info(f"Executing notebook {nb_name}.")
-            nb_name, nb_output_json = self.execute(nb_name)
-            logging.info(f"Writing output for notebook {nb_name}.")
-            if self.storage_client: 
-                self.storage_client.upload(
-                    f"{nb_name}.json", json.dumps(nb_output_json)
-                )
