@@ -9,24 +9,12 @@ from pathlib import Path
 import yaml 
 from dotenv import dotenv_values
 
-from process_notebooks import process_notebooks
+from create_serverless_code import create_serverless_code
 
 environ = dotenv_values()
 
-SERVERLESS_DEPLOY_PATH = Path(environ['SERVERLESS_DEPLOY_PATH'])
+PATH_SERVERLESS_CODE_DEPLOY = Path(environ['PATH_SERVERLESS_CODE_DEPLOY'])
 GCLOUD_DEPLOY_ENV_FILE = '.env.yml'
-
-
-@contextmanager
-def copy_requirements_file(): 
-    """Copy requirements file from root directory to serverless directory 
-
-    Remove file once context closes 
-    """
-    fpath_new = str(SERVERLESS_DEPLOY_PATH / Path("requirements.txt"))
-    shutil.copyfile("requirements.txt", fpath_new)
-    yield 
-    os.remove(fpath_new)
 
 
 @contextmanager
@@ -49,26 +37,22 @@ def create_env_file(yml_path):
     os.remove(yml_path)
     
 
-"""
-------------- PRE-DEPLOY PIPELINE FOR SERVERLESS FUNCTION --------------------
-"""
+if __name__ == '__main__': 
 
-cmd = rf"""gcloud functions deploy beanstalk_analytics_handler \
---region=us-east1 \
---runtime=python310 \
---source={SERVERLESS_DEPLOY_PATH} \
---entry-point=beanstalk_analytics_handler \
---env-vars-file={GCLOUD_DEPLOY_ENV_FILE} \
---ignore-file=../.gcloudignore \
---trigger-http \
---allow-unauthenticated
-"""
+    create_serverless_code()
 
-process_notebooks() 
-with (
-    copy_requirements_file(), 
-    create_env_file(GCLOUD_DEPLOY_ENV_FILE),
-): 
-    subprocess.run(
-        [c.strip() for c in shlex.split(cmd)], stderr=sys.stderr, stdout=sys.stdout
-    )
+    cmd = rf"""gcloud functions deploy beanstalk_analytics_handler \
+    --region=us-east1 \
+    --runtime=python310 \
+    --source={PATH_SERVERLESS_CODE_DEPLOY} \
+    --entry-point=beanstalk_analytics_handler \
+    --env-vars-file={GCLOUD_DEPLOY_ENV_FILE} \
+    --ignore-file=../.gcloudignore \
+    --trigger-http \
+    --allow-unauthenticated
+    """
+    
+    with create_env_file(GCLOUD_DEPLOY_ENV_FILE): 
+        subprocess.run(
+            [c.strip() for c in shlex.split(cmd)], stderr=sys.stderr, stdout=sys.stdout
+        )

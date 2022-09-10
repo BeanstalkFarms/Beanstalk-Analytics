@@ -21,16 +21,21 @@ BUCKET_NAME = os.environ["NEXT_PUBLIC_STORAGE_BUCKET_NAME"]
 CREDENTIALS, PROJECT_ID = google.auth.load_credentials_from_file(os.environ['GOOGLE_APPLICATION_CREDENTIALS'])
 
 
-def log_runtime(fn): 
-    @wraps(fn)
-    def wrapped(*args, **kwargs): 
-        start_time = time.time()
-        rval = fn(*args, **kwargs)
-        end_time = time.time()
-        run_secs = end_time - start_time 
-        logger.info(f"Runtime of {fn.__name__} was {run_secs} seconds.")
-        return rval 
-    return wrapped 
+def log_runtime_decorator(log_func=None): 
+    """Logs runtime of wrapped function. Also stores runtime as private attribute on function."""
+    def decorator_inception_lmao(fn): 
+        @wraps(fn)
+        def decorator_inception_lmao_lmao(*args, **kwargs): 
+            start_time = time.time()
+            rval = fn(*args, **kwargs)
+            end_time = time.time()
+            run_secs = end_time - start_time 
+            decorator_inception_lmao_lmao._decorated_run_time_seconds = run_secs
+            msg = (log_func and log_func(run_secs, args, kwargs)) or fn.__name__
+            logger.info(msg)
+            return rval 
+        return decorator_inception_lmao_lmao 
+    return decorator_inception_lmao
 
 
 class StorageClient: 
@@ -52,7 +57,9 @@ class StorageClient:
             age_seconds = None 
         return blob, exists, age_seconds
 
-    @log_runtime
+    @log_runtime_decorator(
+        log_func=lambda run_secs, args, _: f"Upload {args[0].name} to GCP storage bucket took {run_secs} seconds."
+    )
     def upload(self, blob, data: str) -> None: 
         blob.upload_from_string(data, retry=None)
         return 
@@ -76,7 +83,9 @@ class NotebookRunner:
     def exists(self, nb_name: str) -> bool: 
         return nb_name in self.ntbk_name_path_map 
 
-    @log_runtime
+    @log_runtime_decorator(
+        log_func=lambda run_secs, args, _: f"Executing notebook {args[0]} took {run_secs} seconds."
+    )
     def execute(self, nb_name: str) -> Tuple[str, Dict]: 
         """Execute notebook and extract output. 
             
@@ -111,5 +120,5 @@ class NotebookRunner:
                     }
                 ]
             }:
-                return nb_name, nb_output_json 
+                return nb_output_json 
         raise ValueError("Notebook executed but output form was incorrect.")
