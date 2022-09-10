@@ -22,64 +22,75 @@ STORAGE_EMULATOR_HOST_NAME=localhost
 STORAGE_EMULATOR_PORT=9023
 _STORAGE_EMULATOR_HOST="http://$(STORAGE_EMULATOR_HOST_NAME):$(STORAGE_EMULATOR_PORT)"
 
-# PATTERN VARIABLES (DO NOT MODIFY THESE VALUES UNLESS YOU HAVE A DAMN GOOD REASON TO)
+# RULES - FRONTEND  
 # -----------------------------------------------------------------------------------------------
 
-# Ensures that when running api in local dev mode with local backend, we use emulator 
-test-api-bucket-loc%: STORAGE_EMULATOR_HOST=$(_STORAGE_EMULATOR_HOST)
-# Suppresses build logs for quiet builds 
-build-api-q%: BUILD_API_VERBOSE=false
 
-# CANNED RECIPES 
-# Rely on values set by pattern variables above 
+# RULES - BACKEND 
 # -----------------------------------------------------------------------------------------------
 
-define run_test_api
-	chmod +x ./scripts/test-api.sh; scripts/test-api.sh; 
-endef 
-
-define run_build_api
-	if [[ "${BUILD_API_VERBOSE}" = "false" ]]; then \
-		chmod +x ./scripts/build-api.sh; scripts/build-api.sh false; \
-	else \
-		chmod +x ./scripts/build-api.sh; scripts/build-api.sh true; \
-	fi 
-endef 
-
-# RULES
-# -----------------------------------------------------------------------------------------------
+# Runs the google storage bucket emulator process. This command 
+# should be run prior to testing the api locally with a local backend. 
 local-bucket: 
-	@yarn emulate
+	@python scripts/python/emulate_storage.py
 
-# Re-runs make-test api on any changes to source code directory. This allows 
-# developers to make changes in the source code directory, and each time a 
-# change is detected, the serverless code is rebuilt, and functions-framework
-# is re-launched. Ngl I kinda popped off on this one. 
-.PHONY: test-api-debug
-test-api-debug: 
-# TODO: Fix the test command called here. Make a pattern variable. 
-	@nodemon --watch src_py --exec "make test-api" -e py,ipynb --verbose
+# Executes nodemon to watch src_py for changes. Each time a change 
+# is detected in one the source files, we run a make command that 
+# 1. Re-builds the serverless code bundle 
+# 2. Re-launches the local serverless development stack.
+# TODO: Figure out if there is any teardown that needs to be performed by nodemomn 
+define run_nodemon
+	nodemon --watch src_py \
+		--exec "make $(1)" \ 
+		-e py,ipynb \
+		--verbose
+endef 
 
-# Builds serverless code bundle, ensures emulator host is running, 
-# and starts functions framework from deployment code directory. 
+# Local debugging of cloud function with local backend. 
+.PHONY: debug-api-bucket-local
+debug-api-bucket-local: build-api-quiet
+	@$(call run_nodemon, "test-api-bucket-local")
+
+# Local debugging of cloud function with gcp backend. 
+.PHONY: debug-api-bucket-gcp
+debug-api-bucket-gcp: build-api-quiet
+	@$(call run_nodemon, "test-api-bucket-gcp")
+
+# Deploys google cloud function locally for testing. 
+# If env variable STORAGE_EMULATOR_HOST is set we use a local backend storage emulator. 
+# If env variable STORAGE_EMULATOR_HOST is not set we use a GCP bucket as the backend. 
+define run_test_api
+	chmod +x ./scripts/shell/test-api.sh; \
+		scripts/shell/test-api.sh; 
+endef 
+
+test-api-bucket-loc%: STORAGE_EMULATOR_HOST=$(_STORAGE_EMULATOR_HOST)
+
+# Deploy google cloud function locally for testing with local backend. 
 .PHONY: test-api-bucket-local
 test-api-bucket-local: build-api-quiet
 	@$(call run_test_api)
 
-# Builds serverless code bundle, ensures emulator host is NOT running, 
-# and starts functions framework from deployment code directory. 
+# Deploy google cloud function locally for testing with gcp backend. 
 .PHONY: test-api-bucket-gcp
 test-api-bucket-gcp: build-api-quiet
 	@$(call run_test_api)
 
-# Builds serverless code bundle that gets deployed to google cloud functions 
-# verbose textual output
+# Builds serverless code bundle that gets deployed to 
+# google cloud functions. This code bundle is also used 
+# for local testing. 
+# $1: bool = flag for verbose output 
+define run_build_api
+	chmod +x ./scripts/shell/build-api.sh; \
+		scripts/shell/build-api.sh "$(1)"; 
+endef 
+
+# Builds serverless code bundle with verbose output 
 .PHONY: build-api 
 build-api: 
-	@$(call run_build_api)
+	@$(call run_build_api, "true")
 	
-# Builds serverless code bundle that gets deployed to google cloud functions 
-# limited textual output
+# Builds serverless code bundle with no output 
 .PHONY: build-api-quiet
 build-api-quiet: 
-	@$(call run_build_api)
+	@$(call run_build_api, "false")

@@ -8,7 +8,7 @@ from pandas import DataFrame
 from IPython.display import display 
 from IPython.core.display import HTML
 
-# temp fix. 
+# TODO: Figure out a solution here 
 load_dotenv("../../.env")
 SUBGRAPH_URL = os.environ['SUBGRAPH_URL']
 

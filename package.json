@@ -5,7 +5,6 @@
   "scripts": {
     "dev": "next dev",
     "dev-vercel": "pipenv run yarn run vercel dev",
-    "emulate": "python test/emulate.py",
     "build": "yarn generate && next build",
     "start": "next start",
     "lint": "next lint",

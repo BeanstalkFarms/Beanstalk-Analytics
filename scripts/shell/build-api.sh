@@ -1,12 +1,13 @@
-if [ $1 = "true" ]; then 
+VERBOSE=$1
+if [ $VERBOSE = "true" ]; then 
     echo "------------------------------------------------------------------------"; 
     echo "Creating serverless code bundle"; 
     echo "------------------------------------------------------------------------"; 
-    python scripts/create_serverless_code.py; 
+    python scripts/python/create_serverless_code.py; 
     echo "------------------------------------------------------------------------"; 
     echo "Showing generated directory structure"; 
     echo "------------------------------------------------------------------------"; 
-    python scripts/tree.py --path $PATH_SERVERLESS_CODE_DEPLOY; 
+    python scripts/python/tree.py --path $PATH_SERVERLESS_CODE_DEPLOY; 
 else 
-    python scripts/create_serverless_code.py --quiet; 
+    python scripts/python/create_serverless_code.py --quiet; 
 fi

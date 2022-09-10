@@ -6,15 +6,15 @@ PORT_SCAN_CMD="lsof -i :${STORAGE_EMULATOR_PORT} | grep ${STORAGE_EMULATOR_HOST_
 PORT_SCAN_OUTPUT=$(eval $PORT_SCAN_CMD); 
 PORT_SCAN_STATUS=$?
 if [[ $STORAGE_EMULATOR_HOST ]]; then 
-    echo "Environment variable STORAGE_EMULATOR_PORT set."
+    echo "Environment variable STORAGE_EMULATOR_HOST set."
     echo "Attempting to use local backend ${STORAGE_EMULATOR_HOST}"
     if [[ $PORT_SCAN_STATUS -eq 0 ]]; then 
-        echo "Located process running on emulator port ${STORAGE_EMULATOR_PORT}"
+        echo "Located emulator process."
     else 
         echo "\nIf you see an error above this, running command '${PORT_SCAN_CMD}' failed" 
-        echo "This is likely due to \$STORAGE_EMULATOR_PORT having an invalid value.\n" 
-        echo "If you don't see an error above this, then the command executed successfully"
-        echo "but there was no process listening on the expected port ${STORAGE_EMULATOR_PORT}"
+        echo "This is likely due to \$STORAGE_EMULATOR_HOST having an invalid value.\n" 
+        echo "If you don't see an error above this, then the command executed successfully "
+        echo "but we did not locate a process on the expected host:port combination."
         echo "Make sure that you start the emulator within it's own terminal window before running "
         echo "this command. This will allow you to monitor the logs of the storage emulator."
         exit 1 
