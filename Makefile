@@ -11,20 +11,21 @@ PATH_SERVERLESS_CODE_DEV=src_py
 # Directory where production notebooks exist (within the deployed code bundle).
 # Note: This path is relative to the root PATH_SERVERLESS_CODE_DEPLOY
 PATH_NOTEBOOKS=notebooks/prod
+# This tells the GCP storage client to connect to a different endpoint than 
+# for production buckets. Useful to avoid reading from / writing to buckets in testing. 
+# Not a well documented feature within the API but here's the PR that added in the feature
+# https://github.com/googleapis/google-cloud-python/pull/9219
+_STORAGE_EMULATOR_HOST=http://localhost:9023
 
-# define my_func
-# 	echo "Doing some stuff"
-# 	echo "${HELLO}"
-# endef
 
-# cm%: HELLO = heyyyy
-# cmd: 
-# 	$(call my_func);
-# cd: 
-# 	$(call my_func);
+# local-bucket: 
+# 	@yarn emulate
 
-local-bucket: 
-	@yarn emulate
+# test api local bucket 
+# test api gcp bucket 
+# test api local bucket (+nodemon)
+# test api gcp bucket (+nodemon)
+
 
 # Re-runs make-test api on any changes to source code directory. This allows 
 # developers to make changes in the source code directory, and each time a 
@@ -36,28 +37,35 @@ test-api-debug:
 
 # Builds serverless code, launches funtions framework from the 
 # bulid directory for local api testing. 
-.PHONY: test-api
-test-api: build-api-quiet
-	@echo "------------------------------------------------------------------------"
-	@echo "Launching api in dev mode from ${PATH_SERVERLESS_CODE_DEPLOY}" 
-	@echo "------------------------------------------------------------------------"
-	@cd $(PATH_SERVERLESS_CODE_DEPLOY); \
-	functions-framework --target=bean_analytics_recalculate_chart
+test-api-bucket-loc%: STORAGE_EMULATOR_HOST=$(_STORAGE_EMULATOR_HOST)
+test-api-bucket-loc%: STORAGE_EMULATOR_PORT=9023
 
-# Builds serverless code bundle that will be deployed to google cloud functions 
+# Builds serverless code bundle, ensures emulator host is running, 
+# and starts functions framework from deployment code directory. 
+.PHONY: test-api-bucket-local
+test-api-bucket-local: build-api-quiet
+	@chmod +x ./scripts/test-api.sh 
+	@scripts/test-api.sh
+
+# Builds serverless code bundle, ensures emulator host is NOT running, 
+# and starts functions framework from deployment code directory. 
+.PHONY: test-api-bucket-gcp
+test-api-bucket-gcp: build-api-quiet
+	@chmod +x ./scripts/test-api.sh 
+	@scripts/test-api.sh 
+
+# Builds serverless code bundle that gets deployed to google cloud functions 
+# verbose textual output
 .PHONY: build-api 
 build-api: 
-	@echo "------------------------------------------------------------------------"
-	@echo "Creating serverless code bundle" 
-	@echo "------------------------------------------------------------------------"
-	@python scripts/create_serverless_code.py 
-	@echo "------------------------------------------------------------------------"
-	@echo "Showing generated directory structure" 
-	@echo "------------------------------------------------------------------------"
-	@python scripts/tree.py --path $(PATH_SERVERLESS_CODE_DEPLOY)
-
-# Does the same thing as build but produces no text output 
+	@chmod +x ./scripts/build-api.sh 
+	@scripts/build-api.sh 
+	
+# Builds serverless code bundle that gets deployed to google cloud functions 
+# limited textual output
 .PHONY: build-api-quiet
 build-api-quiet: 
-	@python scripts/create_serverless_code.py --quiet 
+	@chmod +x ./scripts/build-api.sh 
+	@scripts/build-api.sh false 
+	
 

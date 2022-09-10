@@ -113,6 +113,10 @@ functions-framework --target=beanstalk_analytics_handler --debug
 curl "http://localhost:8080/api?name=field"
 ```
 
+```bash
+curl "http://localhost:8080/api?name=FieldOverview&force_refresh=True"
+```
+
 TODO: Notes on service account access for this function. 
 
 ### HTTPS Load Balancer 
