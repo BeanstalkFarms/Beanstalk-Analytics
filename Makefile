@@ -2,6 +2,16 @@
 include .env
 export
 
+# Directory where we keep code deployed to google cloud function (our serverless backend)
+PATH_SERVERLESS_CODE_DEPLOY=serverless
+# Directory where we keep code that serves as base for code deployed to google cloud function 
+# This directory contains additional code and data that we don't want to deploy so that's 
+# why it is separate from PATH_SERVERLESS_CODE_DEPLOY
+PATH_SERVERLESS_CODE_DEV=src_py
+# Directory where production notebooks exist (within the deployed code bundle).
+# Note: This path is relative to the root PATH_SERVERLESS_CODE_DEPLOY
+PATH_NOTEBOOKS=notebooks/prod
+
 # define my_func
 # 	echo "Doing some stuff"
 # 	echo "${HELLO}"

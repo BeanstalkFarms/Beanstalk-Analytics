@@ -15,6 +15,13 @@ import google.auth
 
 logger = logging.getLogger(__name__)
 
+try: 
+    # Since this is a private method we wrap in a try except for safety 
+    from google.cloud.storage._helpers import _get_storage_host
+    logger.info(f"Storage host: {_get_storage_host()}")
+except BaseException as e: 
+    logger.warning(f"Unable to determine storage host.")
+
 BUCKET_NAME = os.environ["NEXT_PUBLIC_STORAGE_BUCKET_NAME"]
 PATH_NOTEBOOKS = os.environ["PATH_NOTEBOOKS"]
 CREDENTIALS, PROJECT_ID = google.auth.load_credentials_from_file(os.environ['GOOGLE_APPLICATION_CREDENTIALS'])
