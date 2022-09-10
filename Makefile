@@ -20,17 +20,37 @@ PATH_NOTEBOOKS=notebooks/prod
 # https://github.com/googleapis/google-cloud-python/pull/9219
 STORAGE_EMULATOR_HOST_NAME=localhost
 STORAGE_EMULATOR_PORT=9023
-_STORAGE_EMULATOR_HOST="http://$(STORAGE_EMULATOR_HOST_NAME):$(STORAGE_EMULATOR_PORT)"
+STORAGE_EMULATOR_HOST_LOCAL="http://$(STORAGE_EMULATOR_HOST_NAME):$(STORAGE_EMULATOR_PORT)"
 
 # RULES - FRONTEND  
+# Wrappers around `yarn run` with environment configuration. 
 # -----------------------------------------------------------------------------------------------
 
+frontend-dev-bucket-lo%: NEXT_PUBLIC_CDN=STORAGE_EMULATOR_HOST_LOCAL
+frontend-dev-bucket-gc%: NEXT_PUBLIC_CDN=https://storage.googleapis.com
+
+.PHONY: frontend-dev-bucket-local
+frontend-dev-bucket-local: 
+	@yarn dev 
+
+.PHONY: frontend-dev-bucket-gcp
+frontend-dev-bucket-gcp: 
+	@yarn dev 
+
+.PHONY: frontend-start
+frontend-start: 
+	@yarn start 
+
+.PHONY: frontend-build
+frontend-build: 
+	@yarn build 
 
 # RULES - BACKEND 
 # -----------------------------------------------------------------------------------------------
 
 # Runs the google storage bucket emulator process. This command 
-# should be run prior to testing the api locally with a local backend. 
+# should be run prior to testing the api locally with a local backend.
+.PHONY: local-bucket
 local-bucket: 
 	@python scripts/python/emulate_storage.py
 
@@ -64,7 +84,7 @@ define run_test_api
 		scripts/shell/test-api.sh; 
 endef 
 
-test-api-bucket-loc%: STORAGE_EMULATOR_HOST=$(_STORAGE_EMULATOR_HOST)
+test-api-bucket-loc%: STORAGE_EMULATOR_HOST=$(STORAGE_EMULATOR_HOST_LOCAL)
 
 # Deploy google cloud function locally for testing with local backend. 
 .PHONY: test-api-bucket-local

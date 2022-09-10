@@ -4,7 +4,6 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "dev-vercel": "pipenv run yarn run vercel dev",
     "build": "yarn generate && next build",
     "start": "next start",
     "lint": "next lint",
