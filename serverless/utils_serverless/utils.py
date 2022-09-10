@@ -1,28 +1,30 @@
 import os
-import json 
 import logging 
 import time 
 import datetime 
 from functools import wraps
-from typing import Dict, Tuple, List, Optional
+from typing import Dict, Tuple, List
 from pathlib import Path 
 
 import nbformat
 from nbclient import NotebookClient
 from google.api_core.exceptions import NotFound
 from google.cloud import storage 
-from googleapiclient import discovery
 import google.auth 
 
 
 logger = logging.getLogger(__name__)
 
 BUCKET_NAME = os.environ["NEXT_PUBLIC_STORAGE_BUCKET_NAME"]
+PATH_NOTEBOOKS = os.environ["PATH_NOTEBOOKS"]
 CREDENTIALS, PROJECT_ID = google.auth.load_credentials_from_file(os.environ['GOOGLE_APPLICATION_CREDENTIALS'])
 
 
 def log_runtime_decorator(log_func=None): 
-    """Logs runtime of wrapped function. Also stores runtime as private attribute on function."""
+    """Logs runtime of wrapped function. Also stores runtime as private attribute on function.
+    
+    Necessary? No. Cool? Yes.
+    """
     def decorator_inception_lmao(fn): 
         @wraps(fn)
         def decorator_inception_lmao_lmao(*args, **kwargs): 
@@ -52,13 +54,15 @@ class StorageClient:
             blob.reload()
             obj_dtime = blob.time_created
             age_seconds = (cur_dtime - obj_dtime).total_seconds()
-        except NotFound as e: 
+        except NotFound: 
             exists = False 
             age_seconds = None 
         return blob, exists, age_seconds
 
     @log_runtime_decorator(
-        log_func=lambda run_secs, args, _: f"Upload {args[0].name} to GCP storage bucket took {run_secs} seconds."
+        log_func=lambda run_secs, args, _: (
+            f"Upload {args[1].name} to GCP storage bucket took {run_secs} seconds."
+        )
     )
     def upload(self, blob, data: str) -> None: 
         blob.upload_from_string(data, retry=None)
@@ -68,7 +72,7 @@ class StorageClient:
 class NotebookRunner: 
 
     def __init__(self): 
-        self.path_notebooks = Path('./notebooks-processed')
+        self.path_notebooks = Path(PATH_NOTEBOOKS)
         self.ntbk_name_path_map: Dict[str, str] = {
             # Allows for case insensitive matchine of chart names 
             nb_path.stem.lower(): nb_path 
@@ -84,7 +88,9 @@ class NotebookRunner:
         return nb_name in self.ntbk_name_path_map 
 
     @log_runtime_decorator(
-        log_func=lambda run_secs, args, _: f"Executing notebook {args[0]} took {run_secs} seconds."
+        log_func=lambda run_secs, args, _: (
+            f"Executing notebook {args[1]} took {run_secs} seconds."
+        )
     )
     def execute(self, nb_name: str) -> Tuple[str, Dict]: 
         """Execute notebook and extract output. 

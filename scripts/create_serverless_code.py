@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 def create_serverless_code(): 
 
-    DIR_ROOT = Path(os.environ['DIR_PATH_PROJECT'])
+    DIR_ROOT = Path(os.environ['PATH_PROJECT'])
     DIR_SRC = Path(os.environ['PATH_SERVERLESS_CODE_DEV'])
     DIR_DST = Path(os.environ['PATH_SERVERLESS_CODE_DEPLOY'])
     

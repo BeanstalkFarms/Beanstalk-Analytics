@@ -2,6 +2,20 @@
 include .env
 export
 
+# define my_func
+# 	echo "Doing some stuff"
+# 	echo "${HELLO}"
+# endef
+
+# cm%: HELLO = heyyyy
+# cmd: 
+# 	$(call my_func);
+# cd: 
+# 	$(call my_func);
+
+local-bucket: 
+	@yarn emulate
+
 # Re-runs make-test api on any changes to source code directory. This allows 
 # developers to make changes in the source code directory, and each time a 
 # change is detected, the serverless code is rebuilt, and functions-framework
@@ -36,3 +50,4 @@ build-api:
 .PHONY: build-api-quiet
 build-api-quiet: 
 	@python scripts/create_serverless_code.py --quiet 
+

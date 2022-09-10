@@ -17,7 +17,7 @@ nbr: NotebookRunner = NotebookRunner()
 
 
 @functions_framework.http
-def recalculate_chart(request):
+def bean_analytics_recalculate_chart(request):
     """Top level server router 
     
     Matches incoming requests to one or more jupyter notebook(s). 
