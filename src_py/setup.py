@@ -6,4 +6,5 @@ setup(
       description='Beanstalk Analytics python backend and tooling.',
       author='TBIQ',
       author_email='tbiq@bean.farm',
+      packages=['notebooks', 'utils_notebook', 'utils_serverless']
 )

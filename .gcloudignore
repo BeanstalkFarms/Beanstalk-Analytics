@@ -1,3 +1,0 @@
-# Only upload processed notebooks 
-serverless/notebooks/**
-serverless/notebooks-dev/**

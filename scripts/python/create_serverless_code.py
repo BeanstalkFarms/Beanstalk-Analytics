@@ -9,7 +9,8 @@ from pathlib import Path
 import nbformat
 from nbformat.v4 import new_code_cell, new_notebook
 
-from safe_rmtree import safe_rmtree  # bro you thought I was just gonna rawdog shutil.rmtree ?????
+from safe_rmtree import safe_rmtree
+from utils_serverless.utils import PATH_NOTEBOOKS  # bro you thought I was just gonna rawdog shutil.rmtree ?????
 
 
 logger = logging.getLogger(__name__)
@@ -20,14 +21,18 @@ def create_serverless_code():
     DIR_ROOT = Path(os.environ['PATH_PROJECT'])
     DIR_SRC = Path(os.environ['PATH_SERVERLESS_CODE_DEV'])
     DIR_DST = Path(os.environ['PATH_SERVERLESS_CODE_DEPLOY'])
+    PATH_NOTEBOOKS = Path(os.environ['PATH_NOTEBOOKS'])
     
     # Empty the serverless code directory (and create anew) if it exists 
-    safe_rmtree(DIR_DST)
-    os.mkdir(DIR_DST)
+    if DIR_DST.exists(): 
+        safe_rmtree(DIR_DST)
+    os.makedirs(DIR_DST)
+
+    shutil.copytree()
 
     # Copy directories 
     for src, dst, dir_name in [
-        (DIR_SRC, DIR_DST, "notebooks/prod"), 
+        (DIR_SRC, DIR_DST, PATH_NOTEBOOKS), 
         (DIR_SRC, DIR_DST, "utils_notebook"), 
         (DIR_SRC, DIR_DST, "utils_serverless"), 
     ]: 
@@ -42,7 +47,7 @@ def create_serverless_code():
         shutil.copyfile(str(src / file_name), str(dst / file_name))
 
     # Process notebooks, consolidating all source code into single cell
-    path_notebooks = DIR_DST / "notebooks/prod"
+    path_notebooks = DIR_DST / PATH_NOTEBOOKS
     for fpath in filter(lambda p: p.suffix == '.ipynb', path_notebooks.iterdir()): 
         nb = nbformat.read(fpath, as_version=4)
         src = '\n'.join(
@@ -51,14 +56,6 @@ def create_serverless_code():
         new_nb = new_notebook(cells=[new_code_cell(cell_type="code", source=src)])
         nbformat.write(new_nb, str(fpath))
         logging.info(f"Processed notebook {fpath}")
-
-    # cleanup any unnecessary files / directories copied over 
-    dir_patterns = [r"__pycache__", r'.*\.egg-info'] 
-    for (dirpath, dirnames, filenames) in os.walk(str(DIR_DST), topdown=False): 
-        for p in dir_patterns: 
-            if re.fullmatch(p, Path(dirpath).name): 
-                logging.info(f"Removing {dirpath}")
-                safe_rmtree(dirpath)
 
 
 if __name__ == "__main__": 

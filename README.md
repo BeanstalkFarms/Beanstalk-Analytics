@@ -12,7 +12,8 @@
 ## Application Architecture 
 
 This application consists of
-- A frontend application (next.js) in `pages/`.
+- A frontend application (next.js) contained in various top level directories.
+  - The main application 
 - A backend in `serverless` consisting of 
   - Object storage (GCP storage). 
   - Serverless compute (GCP cloud functions). 

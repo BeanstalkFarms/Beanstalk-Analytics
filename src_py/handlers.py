@@ -1,8 +1,6 @@
-import logging 
 import json 
 import datetime 
-
-import functions_framework
+import logging 
 
 from utils_serverless.utils import StorageClient, NotebookRunner
 
@@ -13,12 +11,12 @@ logging.basicConfig(level=logging.INFO)
 MAX_AGE_SECONDS = 15 * 60 # 15 minutes 
 
 sc = StorageClient()
-nbr: NotebookRunner = NotebookRunner()
+nbr = NotebookRunner()
 
 
-@functions_framework.http
-def bean_analytics_recalculate_chart(request):
-    """Top level server router 
+def handler_charts_refresh(request): 
+    """Recalculates one or more chart objects 
+    
     
     Matches incoming requests to one or more jupyter notebook(s). 
     Executes the notebook(s) and writes their outputs to a GCP bucket. 
@@ -37,12 +35,17 @@ def bean_analytics_recalculate_chart(request):
             schema_names = [schema_name]
         case "*":
             schema_names = nbr.names
+        case name.split(',') as schema_names if all(
+            [nbr.exists(schema_name) for schema_name in name.split(',')]
+        ):
+            pass 
         case None: 
-            return "No name specified", 404 
+            return "No name(s) specified", 404 
         case _: 
             return (
-                f"Chart with name {name} does not exist. "
-                f"Valid options are {nbr.names}."
+                f"Invalid value for querystring parameter {name}. "
+                "Names must either be a name, a csv list of "
+                f"names, or the symbol *. Valid names are {nbr.names}."
             ), 404 
 
     # Optionally re-compute and upload each schema

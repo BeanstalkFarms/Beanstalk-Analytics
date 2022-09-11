@@ -6,7 +6,7 @@ export
 # -----------------------------------------------------------------------------------------------
 
 # Directory where we keep code deployed to google cloud function (our serverless backend)
-PATH_SERVERLESS_CODE_DEPLOY=serverless
+PATH_SERVERLESS_CODE_DEPLOY=.build-serverless/deploy
 # Directory where we keep code that serves as base for code deployed to google cloud function 
 # This directory contains additional code and data that we don't want to deploy so that's 
 # why it is separate from PATH_SERVERLESS_CODE_DEPLOY
@@ -20,7 +20,7 @@ PATH_NOTEBOOKS=notebooks/prod
 # https://github.com/googleapis/google-cloud-python/pull/9219
 STORAGE_EMULATOR_HOST_NAME=localhost
 STORAGE_EMULATOR_PORT=9023
-STORAGE_EMULATOR_HOST_LOCAL="http://$(STORAGE_EMULATOR_HOST_NAME):$(STORAGE_EMULATOR_PORT)"
+STORAGE_EMULATOR_HOST_LOCAL=http://$(STORAGE_EMULATOR_HOST_NAME):$(STORAGE_EMULATOR_PORT)
 
 # RULES - FRONTEND  
 # Wrappers around `yarn run` with environment configuration. 
@@ -52,7 +52,7 @@ frontend-build:
 # should be run prior to testing the api locally with a local backend.
 .PHONY: local-bucket
 local-bucket: 
-	@python scripts/python/emulate_storage.py
+	@python src_py/tests/emulate_storage.py
 
 # Executes nodemon to watch src_py for changes. Each time a change 
 # is detected in one the source files, we run a make command that 
@@ -114,3 +114,9 @@ build-api:
 .PHONY: build-api-quiet
 build-api-quiet: 
 	@$(call run_build_api, "false")
+
+test-loc%: STORAGE_EMULATOR_HOST=$(STORAGE_EMULATOR_HOST_LOCAL)
+test-loc%: PATH_NOTEBOOKS=notebooks/testing
+
+test-local: build-api
+	@pytest src_py/tests/test_api_local.py -s
