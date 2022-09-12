@@ -2,7 +2,7 @@ import logging
 import time 
 from collections import defaultdict
 
-from src_py.utils_serverless import NotebookRunner
+from serverless.utils_serverless import NotebookRunner
 
 # disable logs 
 logging.basicConfig(level=logging.CRITICAL)

@@ -4,3 +4,4 @@ setup.py # Ignore setup.py as the directory is not used as a package once upload
 **/__pycache__/
 notebooks/dev/
 notebooks/testing/
+tests/

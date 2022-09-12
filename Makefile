@@ -5,12 +5,13 @@ export
 # MAKEFILE ENVIRONMENT VARIABLES 
 # -----------------------------------------------------------------------------------------------
 
+SERVERLESS_HANDLER=bean_analytics_http_handler
 # Directory where we keep code deployed to google cloud function (our serverless backend)
-PATH_SERVERLESS_CODE_DEPLOY=.build-serverless/deploy
+PATH_SERVERLESS_CODE_DEPLOY=.build/serverless
 # Directory where we keep code that serves as base for code deployed to google cloud function 
 # This directory contains additional code and data that we don't want to deploy so that's 
 # why it is separate from PATH_SERVERLESS_CODE_DEPLOY
-PATH_SERVERLESS_CODE_DEV=src_py
+PATH_SERVERLESS_CODE_DEV=serverless
 # Directory where production notebooks exist (within the deployed code bundle).
 # Note: This path is relative to the root PATH_SERVERLESS_CODE_DEPLOY
 PATH_NOTEBOOKS=notebooks/prod
@@ -52,15 +53,15 @@ frontend-build:
 # should be run prior to testing the api locally with a local backend.
 .PHONY: local-bucket
 local-bucket: 
-	@python src_py/tests/emulate_storage.py
+	@python "${PATH_SERVERLESS_CODE_DEV}/tests/emulate_storage.py"
 
-# Executes nodemon to watch src_py for changes. Each time a change 
+# Executes nodemon to watch source directory for changes. Each time a change 
 # is detected in one the source files, we run a make command that 
 # 1. Re-builds the serverless code bundle 
 # 2. Re-launches the local serverless development stack.
 # TODO: Figure out if there is any teardown that needs to be performed by nodemomn 
 define run_nodemon
-	nodemon --watch src_py \
+	nodemon --watch "${PATH_SERVERLESS_CODE_DEV}" \
 		--exec "make $(1)" \ 
 		-e py,ipynb \
 		--verbose
@@ -118,5 +119,13 @@ build-api-quiet:
 test-loc%: STORAGE_EMULATOR_HOST=$(STORAGE_EMULATOR_HOST_LOCAL)
 test-loc%: PATH_NOTEBOOKS=notebooks/testing
 
-test-local: build-api
-	@pytest src_py/tests/test_api_local.py -s
+test-local: build-api-quiet
+# Note: tests must be run within the source directory, not the 
+# build directory due to how the tests import dependencies. 
+# However, the tests use a simulated local deployment of the 
+# cloud function sourced from the build directory, to ensure 
+# that the build process operates as expected. 
+	@pytest "${PATH_SERVERLESS_CODE_DEV}/tests/test_api_local.py" \
+		#  --log-cli-level DEBUG \ # uncomment when debugging tests 
+		 -s -vvv
+	@rmdir .cloudstorage # used by emulator for local data storage 
