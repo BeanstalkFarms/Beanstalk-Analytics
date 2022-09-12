@@ -199,3 +199,7 @@ google auth docs: https://google-auth.readthedocs.io/en/master/reference/google.
 
 - Investigate how much we can speed up execution time by converting 
   the notebooks into scripts. 
+
+```bash 
+gcloud meta list-files-for-upload .build-serverless/deploy  
+```

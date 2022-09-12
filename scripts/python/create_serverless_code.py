@@ -18,33 +18,19 @@ logger = logging.getLogger(__name__)
 
 def create_serverless_code(): 
 
-    DIR_ROOT = Path(os.environ['PATH_PROJECT'])
-    DIR_SRC = Path(os.environ['PATH_SERVERLESS_CODE_DEV'])
-    DIR_DST = Path(os.environ['PATH_SERVERLESS_CODE_DEPLOY'])
-    PATH_NOTEBOOKS = Path(os.environ['PATH_NOTEBOOKS'])
+    DIR_ROOT = Path(os.environ['PATH_PROJECT']).absolute()
+    DIR_SRC = Path(os.environ['PATH_SERVERLESS_CODE_DEV']).absolute()
+    DIR_DST = Path(os.environ['PATH_SERVERLESS_CODE_DEPLOY']).absolute()
+
+    assert str(DIR_SRC).startswith(str(DIR_ROOT))
+    assert str(DIR_DST).startswith(str(DIR_ROOT))
     
-    # Empty the serverless code directory (and create anew) if it exists 
+    # Remove existing build directory
     if DIR_DST.exists(): 
         safe_rmtree(DIR_DST)
-    os.makedirs(DIR_DST)
-
-    shutil.copytree()
-
-    # Copy directories 
-    for src, dst, dir_name in [
-        (DIR_SRC, DIR_DST, PATH_NOTEBOOKS), 
-        (DIR_SRC, DIR_DST, "utils_notebook"), 
-        (DIR_SRC, DIR_DST, "utils_serverless"), 
-    ]: 
-        shutil.copytree(str(src / dir_name), str(dst / dir_name))
-
-    # Copy files 
-    for src, dst, file_name, in [
-        (DIR_SRC, DIR_DST, "main.py"), 
-        (DIR_SRC, DIR_DST, "tbiq-beanstalk-analytics-bca7893d8291.json"), 
-        (DIR_ROOT, DIR_DST, "requirements.txt"),
-    ]: 
-        shutil.copyfile(str(src / file_name), str(dst / file_name))
+    
+    # Re-create build directory 
+    shutil.copytree(str(DIR_SRC), str(DIR_DST))
 
     # Process notebooks, consolidating all source code into single cell
     path_notebooks = DIR_DST / PATH_NOTEBOOKS
@@ -63,8 +49,8 @@ if __name__ == "__main__":
     parser.add_argument('--quiet', action="store_true")
     args = parser.parse_args()
     if args.quiet: 
-        logger.setLevel(level=logging.CRITICAL)
+        logging.basicConfig(level=logging.CRITICAL)
     else: 
-        logger.setLevel(level=logging.INFO)
+        logging.basicConfig(level=logging.INFO)
     create_serverless_code()
     
