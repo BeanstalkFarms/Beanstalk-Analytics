@@ -13,28 +13,21 @@
 
 This application consists of
 - A frontend application (next.js) contained in various top level directories.
-  - The main application 
-- A backend in `serverless` consisting of 
-  - Object storage (GCP storage). 
-  - Serverless compute (GCP cloud functions). 
-    - The single api endpoint for the application exists within `serverless/main.py`.
-      - This endpoint is a multipliexer, selecting and executing one of the notebooks in 
-      `serverless/notebooks_processed/`. Once the notebook is executed, it's output is 
-      extracted and written to GCP Storage. JSON objects representing compiled vega 
-      schemas for charts to be visualized in the frontend are stored in this bucket. 
+  - The frontend ingests and visualizes data created by the serverless backend.
+- Google Cloud Platform Infrastructure 
+  - A GCP storage bucket containing vega-lite schemas and other application data.  
+- A serverless backend in `serverless` 
+  - A single http request handler is defined in `serverless/main.py`. This handler 
+  serves as a router that routes incoming requests to the appropriate internal handler 
+  function. It supports the following routes
+    - `/charts/refresh`: This route takes one or more schema names as input and for each 
+    one, optionally re-computes the schema. The schema is recomputed when a schema for 
+    the chart does not exist, is older than some number of seconds, or is force refreshed. 
+    When a schema is re-computed, it is written to a GCP storage bucket.  
+  - The `charts/refresh` route detailed above internally executes jupyter notebooks that 
+  exist in `serverless/notebooks/prod`. Each of these notebooks produces a vega-lite schema, 
+  and each notebook in this directory must adhere to a specific structure. 
 
-### Prerequisites
-
-Developers will need to do the following 
-- Setup a [GCloud Account](https://cloud.google.com/). 
-  - Ensure that you enable billing for your account. GCloud gives new users $300 in free credits so 
-  you won't actually be charged unless you surpass this amount of credit, which is hard to do. 
-- Create a project within your GCloud account for developing this application. 
-- Install and authenticate the [GCloud CLI](https://cloud.google.com/sdk/docs/install). 
-
-### Backend 
-
-The backend consists of GCP storage buckets and GCP cloud functions. 
 
 #### Storage 
 
@@ -45,34 +38,7 @@ Contributors who are only concerned with implementing new charts do not need to 
 up their own bucket. Instead, they can use the GCP storage emulator to simulate writing 
 to and reading from a bucket. 
 
-##### GCP Storage Setup 
 
-1. Within the project you created earlier, go to `Cloud Storage` and then `buckets`. 
-2. Create a bucket with 
-   1. Region: `us-east1` 
-   2. Storage Class: `default` 
-   3. Public Access: ` Public to internet` 
-   4. Access Control: `Uniform`
-   This bucket will store all data for the application 
-3. Go to the bucket's permission settings and add a new IAM permission.
-   1. Principal: `allUsers` 
-   2. Role: `Storage Object Viewer`
-   This enables anyone to view the contents of the buckets. 
-   TODO: Can we make this more restrictive in some way but still enable all 
-   clients to view the contents of the buckets? 
-4. Go to `IAM & Admin` and then `Service Accounts`. 
-   1. Create a new service account. 
-   2. Generate and download a key for this service account (a JSON file).
-   This service account will be used by the serverless function to write 
-   data to the bucket created earlier. 
-5. Go to the bucket's permission settings and add a new IAM permission.
-   1. Principal: `SERVICE_ACCOUNT_ID` (the id of the service account created in step 4) 
-   2. Role: `Storage Object Admin`
-   This enables to serverless function to write to the bucket. 
-6. Enter the google cloud shell 
-   1. Run `nano cors.json` amd paste in the value contained in `cors.json` in this repo.
-   2. Run `gsutil cors set cors.json gs://BUCKET_NAME`.
-   This ensures that bucket resources are accessible from any origin. 
 
 ##### GCP Cloud Functions Setup 
 
@@ -102,9 +68,6 @@ set -o allexport; source conf-file; set +o allexport
 curl -m 70 -X GET https://us-east1-tbiq-beanstalk-analytics.cloudfunctions.net/beanstalk_analytics_handler?name=field \
 -H "Authorization: bearer $(gcloud auth print-identity-token)"
 ```
-
-The request should return a `200` status code and there should be a new object
-called `Field.json` in the GCP storage bucket. 
 
 ```bash
 functions-framework --target=beanstalk_analytics_handler --debug 
@@ -199,7 +162,3 @@ google auth docs: https://google-auth.readthedocs.io/en/master/reference/google.
 
 - Investigate how much we can speed up execution time by converting 
   the notebooks into scripts. 
-
-```bash 
-gcloud meta list-files-for-upload .build-serverless/deploy  
-```

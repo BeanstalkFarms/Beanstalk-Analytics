@@ -129,3 +129,28 @@ test-local: build-api-quiet
 		#  --log-cli-level DEBUG \ # uncomment when debugging tests 
 		 -s -vvv
 	@rmdir .cloudstorage # used by emulator for local data storage 
+
+
+deploy-cloud-function: build-api 
+# https://stackoverflow.com/questions/1909188/define-make-variable-at-rule-execution-time
+# TODO: perform a test using this method of setting variables for rules 
+# 		instead of conditional rules?
+# TODO: Figure out why the deployment of the function is failing. 
+	@$(eval GCLOUD_ENV_FILE = ".env.yml")
+	@echo "Creating temporary environment file ${GCLOUD_ENV_FILE}"
+	@python scripts/python/create_gcloud_env_file.py \
+		--file $(GCLOUD_ENV_FILE) \
+		--env-vars \
+			GOOGLE_APPLICATION_CREDENTIALS \
+			NEXT_PUBLIC_STORAGE_BUCKET_NAME \
+			SUBGRAPH_URL; 
+	gcloud functions deploy $(SERVERLESS_HANDLER) \
+		--region=us-east1 \
+		--runtime=python310 \
+		--source=$(PATH_SERVERLESS_CODE_DEPLOY) \
+		--entry-point=$(SERVERLESS_HANDLER) \
+		--env-vars-file=$(GCLOUD_ENV_FILE) \
+		--trigger-http \
+		--allow-unauthenticated
+	@echo "Removing temporary environment file ${GCLOUD_ENV_FILE}"
+	@rm $(GCLOUD_ENV_FILE)
