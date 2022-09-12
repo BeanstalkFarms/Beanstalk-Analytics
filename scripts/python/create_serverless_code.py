@@ -22,6 +22,8 @@ def create_serverless_code():
     DIR_SRC = Path(os.environ['PATH_SERVERLESS_CODE_DEV']).absolute()
     DIR_DST = Path(os.environ['PATH_SERVERLESS_CODE_DEPLOY']).absolute()
 
+    # More sanity checks to protect the filesystem lol 
+    assert str(DIR_ROOT).endswith("beanstalk-data-playground")
     assert str(DIR_SRC).startswith(str(DIR_ROOT))
     assert str(DIR_DST).startswith(str(DIR_ROOT))
     

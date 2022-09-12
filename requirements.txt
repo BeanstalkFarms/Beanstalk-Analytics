@@ -5,11 +5,9 @@ pandas
 altair
 nbformat
 notebook
-python-dotenv # TODO: dev dependency 
-python-box
-python-graphql-client # TODO: remove 
 google-cloud-storage
 google-api-python-client
 functions-framework==3.*
-pyyaml # TODO: dev dependency 
-gcp_storage_emulator # TODO: dev dependency 
+python-dotenv # TODO: Can we make this a dev dependency?
+python-box # TODO: convert Box's to dataclasses 
+# python-graphql-client 

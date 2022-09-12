@@ -2,10 +2,6 @@ import shutil
 import os 
 from pathlib import Path 
 
-from dotenv import load_dotenv
-
-
-assert load_dotenv()
 
 PATH_PROJECT = Path(os.environ['PATH_PROJECT'])
 

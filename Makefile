@@ -2,7 +2,7 @@
 include .env
 export
 
-# MAKEFILE ENVIRONMENT VARIABLES 
+# ENVIRONMENT VARIABLES 
 # -----------------------------------------------------------------------------------------------
 
 SERVERLESS_HANDLER=bean_analytics_http_handler
@@ -23,18 +23,20 @@ STORAGE_EMULATOR_HOST_NAME=localhost
 STORAGE_EMULATOR_PORT=9023
 STORAGE_EMULATOR_HOST_LOCAL=http://$(STORAGE_EMULATOR_HOST_NAME):$(STORAGE_EMULATOR_PORT)
 
-# RULES - FRONTEND  
-# Wrappers around `yarn run` with environment configuration. 
+# -----------------------------------------------------------------------------------------------
+# RULES
 # -----------------------------------------------------------------------------------------------
 
-frontend-dev-bucket-lo%: NEXT_PUBLIC_CDN=STORAGE_EMULATOR_HOST_LOCAL
-frontend-dev-bucket-gc%: NEXT_PUBLIC_CDN=https://storage.googleapis.com
-
+# -----------------------------------------------------------------------------------------------
+# RULES - FRONTEND 
+# -----------------------------------------------------------------------------------------------
 .PHONY: frontend-dev-bucket-local
+frontend-dev-bucket-local: NEXT_PUBLIC_CDN=STORAGE_EMULATOR_HOST_LOCAL
 frontend-dev-bucket-local: 
 	@yarn dev 
 
 .PHONY: frontend-dev-bucket-gcp
+frontend-dev-bucket-gcp: NEXT_PUBLIC_CDN=https://storage.googleapis.com
 frontend-dev-bucket-gcp: 
 	@yarn dev 
 
@@ -46,14 +48,61 @@ frontend-start:
 frontend-build: 
 	@yarn build 
 
+# -----------------------------------------------------------------------------------------------
 # RULES - BACKEND 
 # -----------------------------------------------------------------------------------------------
 
-# Runs the google storage bucket emulator process. This command 
-# should be run prior to testing the api locally with a local backend.
+# RULES - BACKEND - Builds 
+# -----------------------------------------------------------------------------------------------
+
+# Builds serverless code bundle that gets deployed to google cloud functions. 
+# This code bundle is also used when running api locally. 
+define run_build_api
+	chmod +x ./scripts/shell/build-api.sh; \
+		scripts/shell/build-api.sh; 
+endef 
+
+# Builds serverless code bundle with verbose output 
+.PHONY: build-api 
+build-api: BUILD_API_VERBOSE=true
+build-api: 
+	@$(call run_build_api)
+	
+# Builds serverless code bundle with no output 
+.PHONY: build-api-quiet
+build-api-quiet: BUILD_API_VERBOSE=false
+build-api-quiet: 
+	@$(call run_build_api)
+
+# RULES - BACKEND - Local Api Development 
+# -----------------------------------------------------------------------------------------------
+
+# Runs the google storage bucket emulator process. This command should 
+# be run when testing the application with a local backend. 
 .PHONY: local-bucket
 local-bucket: 
 	@python "${PATH_SERVERLESS_CODE_DEV}/tests/emulate_storage.py"
+
+# Deploys google cloud function locally for testing. 
+# If env variable STORAGE_EMULATOR_HOST is set we use a local backend storage emulator. 
+# If env variable STORAGE_EMULATOR_HOST is not set we use a GCP bucket as the backend. 
+define run_local_api
+	chmod +x ./scripts/shell/test-api.sh; \
+		scripts/shell/test-api.sh; 
+endef 
+
+# Run google cloud function locally for testing with local backend. 
+# Note: Run `make local-bucket` prior to executing this command. 
+# 		This is required so that you can view the logs for the local emulator. 
+.PHONY: api-local-bucket-local
+api-local-bucket-local: STORAGE_EMULATOR_HOST=$(STORAGE_EMULATOR_HOST_LOCAL)
+api-local-bucket-local: build-api-quiet
+	@$(call run_local_api)
+
+# Run google cloud function locally for testing with gcp backend. 
+.PHONY: api-local-bucket-gcp
+api-local-bucket-gcp: build-api-quiet
+	@$(call run_local_api)
 
 # Executes nodemon to watch source directory for changes. Each time a change 
 # is detected in one the source files, we run a make command that 
@@ -68,58 +117,23 @@ define run_nodemon
 endef 
 
 # Local debugging of cloud function with local backend. 
-.PHONY: debug-api-bucket-local
-debug-api-bucket-local: build-api-quiet
-	@$(call run_nodemon, "test-api-bucket-local")
+.PHONY: debug-api-local-bucket-local
+debug-api-local-bucket-local: build-api-quiet
+	@$(call run_nodemon, "api-local-bucket-local")
 
 # Local debugging of cloud function with gcp backend. 
-.PHONY: debug-api-bucket-gcp
-debug-api-bucket-gcp: build-api-quiet
-	@$(call run_nodemon, "test-api-bucket-gcp")
+.PHONY: debug-api-local-bucket-gcp
+debug-api-local-bucket-gcp: build-api-quiet
+	@$(call run_nodemon, "api-local-bucket-gcp")
 
-# Deploys google cloud function locally for testing. 
-# If env variable STORAGE_EMULATOR_HOST is set we use a local backend storage emulator. 
-# If env variable STORAGE_EMULATOR_HOST is not set we use a GCP bucket as the backend. 
-define run_test_api
-	chmod +x ./scripts/shell/test-api.sh; \
-		scripts/shell/test-api.sh; 
-endef 
 
-test-api-bucket-loc%: STORAGE_EMULATOR_HOST=$(STORAGE_EMULATOR_HOST_LOCAL)
+# RULES - BACKEND - Local Api Unit Testing 
+# -----------------------------------------------------------------------------------------------
 
-# Deploy google cloud function locally for testing with local backend. 
-.PHONY: test-api-bucket-local
-test-api-bucket-local: build-api-quiet
-	@$(call run_test_api)
-
-# Deploy google cloud function locally for testing with gcp backend. 
-.PHONY: test-api-bucket-gcp
-test-api-bucket-gcp: build-api-quiet
-	@$(call run_test_api)
-
-# Builds serverless code bundle that gets deployed to 
-# google cloud functions. This code bundle is also used 
-# for local testing. 
-# $1: bool = flag for verbose output 
-define run_build_api
-	chmod +x ./scripts/shell/build-api.sh; \
-		scripts/shell/build-api.sh "$(1)"; 
-endef 
-
-# Builds serverless code bundle with verbose output 
-.PHONY: build-api 
-build-api: 
-	@$(call run_build_api, "true")
-	
-# Builds serverless code bundle with no output 
-.PHONY: build-api-quiet
-build-api-quiet: 
-	@$(call run_build_api, "false")
-
-test-loc%: STORAGE_EMULATOR_HOST=$(STORAGE_EMULATOR_HOST_LOCAL)
-test-loc%: PATH_NOTEBOOKS=notebooks/testing
-
-test-local: build-api-quiet
+.PHONY: unit-test-api-local
+unit-test-api-local: STORAGE_EMULATOR_HOST=$(STORAGE_EMULATOR_HOST_LOCAL)
+unit-test-api-local: PATH_NOTEBOOKS=notebooks/testing
+unit-test-api-local: build-api-quiet
 # Note: tests must be run within the source directory, not the 
 # build directory due to how the tests import dependencies. 
 # However, the tests use a simulated local deployment of the 
@@ -130,23 +144,25 @@ test-local: build-api-quiet
 		 -s -vvv
 	@rmdir .cloudstorage # used by emulator for local data storage 
 
+# RULES - BACKEND - Api Deployment 
+# -----------------------------------------------------------------------------------------------
 
-deploy-cloud-function: build-api 
-# https://stackoverflow.com/questions/1909188/define-make-variable-at-rule-execution-time
-# TODO: perform a test using this method of setting variables for rules 
-# 		instead of conditional rules?
-# TODO: Figure out why the deployment of the function is failing. 
-	@$(eval GCLOUD_ENV_FILE = ".env.yml")
+.PHONY: deploy-api
+deploy-api: GCLOUD_ENV_FILE=.env.yml
+deploy-api: build-api 
+# TODO: What is the right amount of memory for the cloud function? 
 	@echo "Creating temporary environment file ${GCLOUD_ENV_FILE}"
 	@python scripts/python/create_gcloud_env_file.py \
 		--file $(GCLOUD_ENV_FILE) \
 		--env-vars \
 			GOOGLE_APPLICATION_CREDENTIALS \
 			NEXT_PUBLIC_STORAGE_BUCKET_NAME \
+			PATH_NOTEBOOKS \
 			SUBGRAPH_URL; 
 	gcloud functions deploy $(SERVERLESS_HANDLER) \
 		--region=us-east1 \
 		--runtime=python310 \
+		--memory=1024MB \
 		--source=$(PATH_SERVERLESS_CODE_DEPLOY) \
 		--entry-point=$(SERVERLESS_HANDLER) \
 		--env-vars-file=$(GCLOUD_ENV_FILE) \
