@@ -40,6 +40,10 @@ def test_host():
     assert _get_storage_host() == 'https://storage.googleapis.com'
 
 
+def test_bucket(): 
+    assert os.environ['NEXT_PUBLIC_STORAGE_BUCKET_NAME'] == os.environ['BUCKET_TEST']
+
+
 @mock.patch.dict(os.environ, environ_patch)
 @pytest.mark.parametrize("schema_name", notebook_names)
 def test_charts_refresh(schema_name):  
