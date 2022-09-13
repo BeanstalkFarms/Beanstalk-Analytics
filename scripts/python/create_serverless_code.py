@@ -10,7 +10,6 @@ import nbformat
 from nbformat.v4 import new_code_cell, new_notebook
 
 from safe_rmtree import safe_rmtree
-from utils_serverless.utils import PATH_NOTEBOOKS  # bro you thought I was just gonna rawdog shutil.rmtree ?????
 
 
 logger = logging.getLogger(__name__)
@@ -21,6 +20,7 @@ def create_serverless_code():
     DIR_ROOT = Path(os.environ['PATH_PROJECT']).absolute()
     DIR_SRC = Path(os.environ['PATH_SERVERLESS_CODE_DEV']).absolute()
     DIR_DST = Path(os.environ['PATH_SERVERLESS_CODE_DEPLOY']).absolute()
+    RPATH_NOTEBOOKS = Path(os.environ['RPATH_NOTEBOOKS'])
 
     # More sanity checks to protect the filesystem lol 
     assert str(DIR_ROOT).endswith("beanstalk-data-playground")
@@ -35,7 +35,7 @@ def create_serverless_code():
     shutil.copytree(str(DIR_SRC), str(DIR_DST))
 
     # Process notebooks, consolidating all source code into single cell
-    path_notebooks = DIR_DST / PATH_NOTEBOOKS
+    path_notebooks = DIR_DST / RPATH_NOTEBOOKS
     for fpath in filter(lambda p: p.suffix == '.ipynb', path_notebooks.iterdir()): 
         nb = nbformat.read(fpath, as_version=4)
         src = '\n'.join(

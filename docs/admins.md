@@ -63,7 +63,7 @@ to update objects in the bucket.
 Once [Setup](#setup) has been completed, admins can start acting as developers 
 with full control over the application. 
 
-#### Deploying Google Cloud Functions
+#### Serverless API Overview 
 
 The application uses a single cloud function to serve all client requests. 
 This handler is called `bean_analytics_http_handler` and it exists in 
@@ -84,28 +84,22 @@ service different types of requests. Here are the supported routes:
     - Each of the notebooks within this directory must follow a specific template 
     detailed (TODO: Create section detailing notebook format. Also create notebook template). 
 
-TODO: Pick up from here. 
+#### Serverless API Deployment 
 
-To deploy this function, run 
-
-```bash 
-python scripts/deploy_cloud_function.py
-```
-
-This function wraps the `gcloud functions deploy` command, and performs
-some pre-processing and data manipulation logic. 
-
-After deploying the serverless function, run the following command in the 
-GCP shell to test that it is working as expected. 
+To deploy (or re-deploy) the handler as a google cloud function, run 
 
 ```bash 
-set -o allexport; source conf-file; set +o allexport
+make deploy-api
 ```
+
+To test that the deployed function is operating as expected, run 
 
 ```bash 
 curl -m 70 -X GET https://us-east1-tbiq-beanstalk-analytics.cloudfunctions.net/beanstalk_analytics_handler?name=field \
 -H "Authorization: bearer $(gcloud auth print-identity-token)"
 ```
+
+
 
 
 ```bash 

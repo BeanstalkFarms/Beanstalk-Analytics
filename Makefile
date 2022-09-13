@@ -1,27 +1,43 @@
+# Exports all environment variables from .env into makefile environment 
 # https://unix.stackexchange.com/questions/235223/makefile-include-env-file
 include .env
 export
 
 # ENVIRONMENT VARIABLES 
 # -----------------------------------------------------------------------------------------------
+# Conventions 
+# - Env vars beginning with PATH are paths relative to project directory. 
+# - Env vars beginning with RPATH are relative paths to some parent path (parent depends). 
 
-SERVERLESS_HANDLER=bean_analytics_http_handler
-# Directory where we keep code deployed to google cloud function (our serverless backend)
-PATH_SERVERLESS_CODE_DEPLOY=.build/serverless
-# Directory where we keep code that serves as base for code deployed to google cloud function 
-# This directory contains additional code and data that we don't want to deploy so that's 
-# why it is separate from PATH_SERVERLESS_CODE_DEPLOY
-PATH_SERVERLESS_CODE_DEV=serverless
-# Directory where production notebooks exist (within the deployed code bundle).
-# Note: This path is relative to the root PATH_SERVERLESS_CODE_DEPLOY
-PATH_NOTEBOOKS=notebooks/prod
-# This tells the GCP storage client to connect to a different endpoint than 
-# for production buckets. Useful to avoid reading from / writing to buckets in testing. 
+# STORAGE / BUCKETS 
+# Testing bucket (used only by tests with GCP backend)
+BUCKET_TEST=beanstalk-analytics-bucket-test
+# Development bucket (write objects here while developing)
+BUCKET_DEV=beanstalk-analytics-bucket-dev
+# Production bucket (backend of production application)
+BUCKET_PROD=beanstalk-analytics-bucket-prod 
+# Production storage host is gcloud storage 
+STORAGE_HOST=https://storage.googleapis.com
+# Local storage host (used for testing)
 # Not a well documented feature within the API but here's the PR that added in the feature
 # https://github.com/googleapis/google-cloud-python/pull/9219
 STORAGE_EMULATOR_HOST_NAME=localhost
 STORAGE_EMULATOR_PORT=9023
 STORAGE_EMULATOR_HOST_LOCAL=http://$(STORAGE_EMULATOR_HOST_NAME):$(STORAGE_EMULATOR_PORT)
+
+# SERVERLESS API 
+# Build directory for source code bundle of google cloud function 
+PATH_SERVERLESS_CODE_DEPLOY=.build/serverless
+# The name of function in main.py of the build directory that is our google cloud function 
+CLOUD_FUNCTION_NAME=bean_analytics_http_handler
+# Directory that serves as source for serverless build. We copy contents from here to the build directory. 
+PATH_SERVERLESS_CODE_DEV=serverless
+# Relative path within build directory to notebooks used for unit tests 
+RPATH_NOTEBOOKS_TEST=notebooks/testing
+# Relative path within build directory to notebooks used for production backend 
+RPATH_NOTEBOOKS_PROD=notebooks/prod
+# By default, we use prod notebook path. For tests, we override this value 
+RPATH_NOTEBOOKS=$(RPATH_NOTEBOOKS_PROD)
 
 # -----------------------------------------------------------------------------------------------
 # RULES
@@ -129,26 +145,34 @@ debug-api-local-bucket-gcp: build-api-quiet
 
 # RULES - BACKEND - Local Api Unit Testing 
 # -----------------------------------------------------------------------------------------------
-
-.PHONY: unit-test-api-local
-unit-test-api-local: STORAGE_EMULATOR_HOST=$(STORAGE_EMULATOR_HOST_LOCAL)
-unit-test-api-local: PATH_NOTEBOOKS=notebooks/testing
-unit-test-api-local: build-api-quiet
 # Note: tests must be run within the source directory, not the 
 # build directory due to how the tests import dependencies. 
 # However, the tests use a simulated local deployment of the 
 # cloud function sourced from the build directory, to ensure 
 # that the build process operates as expected. 
+
+.PHONY: unit-test-api-local
+unit-test-api-local: STORAGE_EMULATOR_HOST=$(STORAGE_EMULATOR_HOST_LOCAL)
+unit-test-api-local: RPATH_NOTEBOOKS=$(RPATH_NOTEBOOKS_TEST) # Overrides default 
+unit-test-api-local: build-api-quiet
 	@pytest "${PATH_SERVERLESS_CODE_DEV}/tests/test_api_local.py" \
-		#  --log-cli-level DEBUG \ # uncomment when debugging tests 
+		#  --log-cli-level DEBUG \
 		 -s -vvv
 	@rmdir .cloudstorage # used by emulator for local data storage 
+
+.PHONY: unit-test-api-gcp
+unit-test-api-gcp: NEXT_PUBLIC_STORAGE_BUCKET_NAME=$(BUCKET_TEST)
+unit-test-api-gcp: build-api-quiet
+	pytest "${PATH_SERVERLESS_CODE_DEV}/tests/test_api_gcp.py" \
+		#  --log-cli-level DEBUG \
+		 -s -vvv
 
 # RULES - BACKEND - Api Deployment 
 # -----------------------------------------------------------------------------------------------
 
 .PHONY: deploy-api
 deploy-api: GCLOUD_ENV_FILE=.env.yml
+deploy-api: RPATH_NOTEBOOKS=$(RPATH_NOTEBOOKS_PROD)
 deploy-api: build-api 
 # TODO: What is the right amount of memory for the cloud function? 
 	@echo "Creating temporary environment file ${GCLOUD_ENV_FILE}"
@@ -157,14 +181,14 @@ deploy-api: build-api
 		--env-vars \
 			GOOGLE_APPLICATION_CREDENTIALS \
 			NEXT_PUBLIC_STORAGE_BUCKET_NAME \
-			PATH_NOTEBOOKS \
+			RPATH_NOTEBOOKS \
 			SUBGRAPH_URL; 
-	gcloud functions deploy $(SERVERLESS_HANDLER) \
+	gcloud functions deploy $(CLOUD_FUNCTION_NAME) \
 		--region=us-east1 \
 		--runtime=python310 \
 		--memory=1024MB \
 		--source=$(PATH_SERVERLESS_CODE_DEPLOY) \
-		--entry-point=$(SERVERLESS_HANDLER) \
+		--entry-point=$(CLOUD_FUNCTION_NAME) \
 		--env-vars-file=$(GCLOUD_ENV_FILE) \
 		--trigger-http \
 		--allow-unauthenticated

@@ -1,34 +1,32 @@
-from datetime import datetime
 import os
-import requests 
-import json 
 import logging 
-import datetime 
-from urllib.parse import urlencode
 from unittest import mock 
 from pathlib import Path 
 
 import pytest 
-from functions_framework import create_app
+from google.cloud.storage._helpers import _get_storage_host
 
 from tests.emulate_storage import get_emulator_server
+from tests.utils import (
+    get_test_api_client, 
+    call_api_validate, 
+    call_storage_validate, 
+) 
 
 
 logging.basicConfig(level=logging.DEBUG)
 
 
-SERVERLESS_HANDLER = os.environ['SERVERLESS_HANDLER']
-PATH_SERVERLESS_CODE_DEV = os.environ['PATH_SERVERLESS_CODE_DEV']
 PATH_SERVERLESS_CODE_DEPLOY = os.environ['PATH_SERVERLESS_CODE_DEPLOY']
-PATH_NOTEBOOKS = os.environ['PATH_NOTEBOOKS']
+RPATH_NOTEBOOKS = os.environ['RPATH_NOTEBOOKS']
 STORAGE_EMULATOR_HOST = os.environ['STORAGE_EMULATOR_HOST']
-BUCKET_NAME = os.environ['NEXT_PUBLIC_STORAGE_BUCKET_NAME']
-
-assert STORAGE_EMULATOR_HOST == 'http://localhost:9023'
-
+environ_patch = {
+    "RPATH_NOTEBOOKS": str(Path(PATH_SERVERLESS_CODE_DEPLOY) / Path(RPATH_NOTEBOOKS))
+}
 
 @pytest.fixture 
 def server(): 
+    # Emulator server simulates GCP storage bucket locally 
     server = get_emulator_server()
     server.start()
     yield server
@@ -36,146 +34,87 @@ def server():
     server.stop() 
 
 
-def get_cloud_function():
-    """Testing client for locally deployed cloud function 
-
-    DO NOT TRY TO MAKE THIS A FIXTURE. Not sure why right now, but 
-    the notebook path gets messed up when this is a fixture but not 
-    when this is initialized within each test. 
-    """
-    path_to_func = str(Path(PATH_SERVERLESS_CODE_DEPLOY) / Path("main.py"))
-    cloud_function = create_app(
-        SERVERLESS_HANDLER, path_to_func, 'http'
-    ).test_client()
-    return cloud_function
-
-
 @pytest.fixture
 def notebook_data(): 
-    notebook_1_data = [{'data': 1, 'timestamp': 1}, {'data': 1, 'timestamp': 2}]
-    notebook_2_data = [{'data': 2, 'timestamp': 1}, {'data': 2, 'timestamp': 2}]
-    notebook_3_data = [{'data': 3, 'timestamp': 1}, {'data': 3, 'timestamp': 2}]
+    # Data objects expected to exist in the returned schemas 
     notebook_data = {
-        "notebook_1": notebook_1_data,
-        "notebook_2": notebook_2_data,
-        "notebook_3": notebook_3_data,
+        "notebook_1": [{'data': 1, 'timestamp': 1}, {'data': 1, 'timestamp': 2}],
+        "notebook_2": [{'data': 2, 'timestamp': 1}, {'data': 2, 'timestamp': 2}],
+        "notebook_3": [{'data': 3, 'timestamp': 1}, {'data': 3, 'timestamp': 2}],
     }
     return notebook_data
+  
 
-
-def get_chart_names_from_query_params(query_params): 
-    qp_data = query_params['data']
-    if qp_data == '*': 
-        chart_names = ["notebook_1", "notebook_2", "notebook_3"]
-    elif ',' in qp_data: 
-        chart_names = qp_data.split(",")
-    else: 
-        chart_names = [qp_data]
-    return chart_names 
-
-
-def call_cloud_function_validate_response(
-    cloud_function, query_params, expected_status
-): 
-    cf_resp = cloud_function.get(f"/charts/refresh?{urlencode(query_params)}")
-    cf_data = json.loads(cf_resp.data)
-    assert cf_resp.status_code == 200
-    chart_names = get_chart_names_from_query_params(query_params)
-    assert set(chart_names) == set(cf_data.keys())
-    for chart_data in cf_data.values(): 
-        assert set(['run_time_seconds', "status"]) == set(chart_data.keys())
-        if expected_status == "recomputed": 
-            assert isinstance(chart_data['run_time_seconds'], float) 
-        else: 
-            assert chart_data['run_time_seconds'] is None 
-        assert chart_data['status'] == expected_status
-    return cf_data 
-
-
-def get_schemas_from_storage(schema_names, notebook_data):
+def multi_call_storage_validate(schema_names, notebook_data):
+    """Retrieves schemas from storage, validates they contain specific data. """
     schema_timestamps = dict()
     for schema_name in schema_names: 
-        url_storage = (
-            f"{STORAGE_EMULATOR_HOST}/{BUCKET_NAME}/schemas/{schema_name}.json"
+        tstamp, schema = call_storage_validate(schema_name)
+        assert (
+            schema['datasets'][schema['data']['name']] 
+            == notebook_data[schema_name]
         )
-        storage_resp = requests.get(url_storage) 
-        assert storage_resp.status_code == 200
-        success = False 
-        match storage_resp.json(): 
-            case {"timestamp": str(tstamp), "schema": schema}: 
-                schema_timestamps[schema_name] = (
-                    datetime.datetime.fromisoformat(tstamp)
-                )
-                assert isinstance(schema_timestamps[schema_name], datetime.datetime)
-                success = (
-                    schema['datasets'][schema['data']['name']] 
-                    == notebook_data[schema_name]
-                )
-        assert success
+        schema_timestamps[schema_name] = tstamp
     return schema_timestamps
 
 
-CHARTS_REFRESH_TEST_QUERY_PARAMS = [
+CHARTS_REFRESH_PARAMETERIZE = [
     # Refresh single chart 
-    (
-        {"data": "notebook_1"}
-    ),
-    (
-        {"data": "notebook_3"}
-    ), 
+    ({"data": "notebook_1"}, ['notebook_1'],),
+    ({"data": "notebook_3"}, ['notebook_3'],), 
     # Refresh multiple charts 
-    (
-        {"data": "notebook_1,notebook_2"}
-    ),
+    ({"data": "notebook_1,notebook_2"}, ['notebook_1', 'notebook_2'],),
     # Refresh all charts 
-    (
-        {"data": "*"}
-    ),
+    ({"data": "*"}, ['notebook_1', 'notebook_2', 'notebook_3'],),
 ]
 
 
-@mock.patch.dict(os.environ, {
-    "PATH_NOTEBOOKS": str(Path(PATH_SERVERLESS_CODE_DEPLOY) / Path(PATH_NOTEBOOKS))
-})
+def test_host(): 
+    assert _get_storage_host() == 'http://localhost:9023'
+
+
+@mock.patch.dict(os.environ, environ_patch)
 @pytest.mark.parametrize(
-    "query_params", CHARTS_REFRESH_TEST_QUERY_PARAMS
+    "query_params,expected_chart_names", CHARTS_REFRESH_PARAMETERIZE
 )
 def test_charts_refresh(
-    server, notebook_data, query_params
+    server, notebook_data, query_params, expected_chart_names
 ):  
-    cloud_function = get_cloud_function()
-    cf_data = call_cloud_function_validate_response(
-        cloud_function, query_params, "recomputed",
+    api = get_test_api_client()
+    api_data = call_api_validate(
+        api, query_params, expected_chart_names, "recomputed",
     )
-    get_schemas_from_storage(cf_data.keys(), notebook_data)
+    schema_names = api_data.keys()
+    multi_call_storage_validate(schema_names, notebook_data)
 
 
-@mock.patch.dict(os.environ, {
-    "PATH_NOTEBOOKS": str(Path(PATH_SERVERLESS_CODE_DEPLOY) / Path(PATH_NOTEBOOKS))
-})
+@mock.patch.dict(os.environ, environ_patch)
 @pytest.mark.parametrize(
-    "query_params", CHARTS_REFRESH_TEST_QUERY_PARAMS
+    "query_params,expected_chart_names", CHARTS_REFRESH_PARAMETERIZE
 )
 def test_charts_refresh_force_update(
-    server, notebook_data, query_params
+    server, notebook_data, query_params, expected_chart_names
 ):
-    cloud_function = get_cloud_function()
+    api = get_test_api_client()
     # First call, no data exists so charts will be computed 
-    cf_data = call_cloud_function_validate_response(
-        cloud_function, query_params, "recomputed",
+    api_data = call_api_validate(
+        api, query_params, expected_chart_names, "recomputed",
     )
-    schema_timestamps_one = get_schemas_from_storage(cf_data.keys(), notebook_data)
+    schema_names_one = api_data.keys()
+    schema_timestamps_one = multi_call_storage_validate(schema_names_one, notebook_data)
     # Second call, data exists so no re-computation occurs 
-    cf_data = call_cloud_function_validate_response(
-        cloud_function, query_params, "use_cached",
+    api_data = call_api_validate(
+        api, query_params, expected_chart_names, "use_cached",
     )
-    schema_timestamps_two = get_schemas_from_storage(cf_data.keys(), notebook_data)
+    schema_names_two = api_data.keys()
+    schema_timestamps_two = multi_call_storage_validate(schema_names_two, notebook_data)
     # Third call, we force refresh 
     query_params = {**query_params, "force_refresh": True}
-    cf_data = call_cloud_function_validate_response(
-        cloud_function, query_params, "recomputed",
+    api_data = call_api_validate(
+        api, query_params, expected_chart_names, "recomputed",
     )
-    schema_timestamps_three = get_schemas_from_storage(cf_data.keys(), notebook_data)
+    schema_names_three = api_data.keys()
+    schema_timestamps_three = multi_call_storage_validate(schema_names_three, notebook_data)
     # Ensure that all calls returned status for same set of schemas
     assert (
         set(schema_timestamps_one.keys()) == 
@@ -187,7 +126,7 @@ def test_charts_refresh_force_update(
         assert (
             schema_timestamps_one[k] == schema_timestamps_two[k]
         ) 
-    # Ensure that timestamps for first call are less than that for third call 
+    # Ensure that timestamps for first call are less than that of third call 
     for k in schema_timestamps_one.keys(): 
         assert (
             schema_timestamps_one[k] < schema_timestamps_three[k]

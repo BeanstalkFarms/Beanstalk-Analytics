@@ -15,15 +15,11 @@ import google.auth
 
 logger = logging.getLogger(__name__)
 
-try: 
-    # Since this is a private method we wrap in a try except for safety 
-    from google.cloud.storage._helpers import _get_storage_host
-    logger.info(f"Storage host: {_get_storage_host()}")
-except BaseException as e: 
-    logger.warning(f"Unable to determine storage host.")
+from google.cloud.storage._helpers import _get_storage_host
+logger.info(f"Storage host: {_get_storage_host()}")
 
 BUCKET_NAME = os.environ["NEXT_PUBLIC_STORAGE_BUCKET_NAME"]
-PATH_NOTEBOOKS = os.environ["PATH_NOTEBOOKS"]
+RPATH_NOTEBOOKS = os.environ["RPATH_NOTEBOOKS"]
 CREDENTIALS, PROJECT_ID = google.auth.load_credentials_from_file(os.environ['GOOGLE_APPLICATION_CREDENTIALS'])
 
 
@@ -79,7 +75,7 @@ class StorageClient:
 class NotebookRunner: 
 
     def __init__(self): 
-        self.path_notebooks = Path(PATH_NOTEBOOKS)
+        self.path_notebooks = Path(RPATH_NOTEBOOKS)
         self.ntbk_name_path_map: Dict[str, str] = {
             # Allows for case insensitive matchine of chart names 
             nb_path.stem.lower(): nb_path 
