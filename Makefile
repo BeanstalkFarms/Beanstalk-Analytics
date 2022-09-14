@@ -47,7 +47,7 @@ RPATH_NOTEBOOKS=$(RPATH_NOTEBOOKS_PROD)
 # RULES - FRONTEND 
 # -----------------------------------------------------------------------------------------------
 .PHONY: frontend-dev-bucket-local
-frontend-dev-bucket-local: NEXT_PUBLIC_CDN=STORAGE_EMULATOR_HOST_LOCAL
+frontend-dev-bucket-local: NEXT_PUBLIC_CDN=$(STORAGE_EMULATOR_HOST_LOCAL)
 frontend-dev-bucket-local: 
 	@yarn dev 
 
@@ -97,7 +97,7 @@ build-api-quiet:
 # be run when testing the application with a local backend. 
 .PHONY: local-bucket
 local-bucket: 
-	@python "${PATH_SERVERLESS_CODE_DEV}/tests/emulate_storage.py"
+	@python "serverless-tests/emulate_storage.py"
 
 # Deploys google cloud function locally for testing. 
 # If env variable STORAGE_EMULATOR_HOST is set we use a local backend storage emulator. 
