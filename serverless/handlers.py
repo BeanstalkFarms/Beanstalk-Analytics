@@ -66,6 +66,7 @@ def handler_charts_refresh(request):
                 schema = nbr.execute(schema_name)
                 run_time_seconds = nbr.execute._decorated_run_time_seconds
                 data = {"timestamp": cur_dtime.isoformat(), "schema": schema}
+                logger.info(f"AYYY SCHEMA {schema_name} RECOMPUTED AT {cur_dtime.isoformat()}")
                 sc.upload(blob, json.dumps(data))
             else: 
                 status = "use_cached"

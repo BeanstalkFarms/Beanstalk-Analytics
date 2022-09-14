@@ -145,11 +145,23 @@ debug-api-local-bucket-gcp: build-api-quiet
 
 # RULES - BACKEND - Local Api Unit Testing 
 # -----------------------------------------------------------------------------------------------
+# Uncomment one of the target specific definitions for UNIT_TEST_API_ARGS for different levels of info 
+unit-test-api: UNIT_TEST_API_ARGS=""
+# unit-test-api: UNIT_TEST_API_ARGS="-s -vvv"
+# unit-test-api: UNIT_TEST_API_ARGS="-s -vvv --log-cli-level DEBUG"
+
+.PHONY: unit-test-api-emulator
+unit-test-api-emulator: build-api-quiet
+	@if [ -d ".cloudstorage " ]; then rmdir ".cloudstorage"; fi
+	eval "pytest ./serverless-tests/test_api_emulator.py ${UNIT_TEST_API_ARGS}"
+	@if [ -d ".cloudstorage " ]; then rmdir ".cloudstorage"; fi
+
+.PHONY: unit-test-api-gcp
+unit-test-api-gcp: build-api-quiet
+	eval "pytest ./serverless-tests/test_api_gcp.py ${UNIT_TEST_API_ARGS}"
+
 .PHONY: unit-test-api
-unit-test-api: build-api-quiet
-	@pytest "./serverless-tests/test_api_gcp.py" -s -vvv \
-		#  --log-cli-level DEBUG 
-	@rmdir .cloudstorage
+unit-test-api: unit-test-api-emulator unit-test-api-gcp
 
 # RULES - BACKEND - Api Deployment 
 # -----------------------------------------------------------------------------------------------

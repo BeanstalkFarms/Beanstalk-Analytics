@@ -69,9 +69,11 @@ def call_storage_validate(schema_name) -> Tuple[datetime.datetime, dict]:
     
     Returns the timestamp and schema. 
     """
+    now = datetime.datetime.now(datetime.timezone.utc)
     BUCKET_NAME = os.environ['NEXT_PUBLIC_STORAGE_BUCKET_NAME']
     url_storage = (
-        f"{_get_storage_host()}/{BUCKET_NAME}/schemas/{schema_name}.json"
+        # Appending timestamp to querystring bypasses caching
+        f"{_get_storage_host()}/{BUCKET_NAME}/schemas/{schema_name}.json?{now.isoformat()}"
     )
     resp = requests.get(url_storage) 
     assert resp.status_code == 200
