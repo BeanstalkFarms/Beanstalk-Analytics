@@ -37,4 +37,4 @@ Right now, this really just for **TBIQ**.
 - [Google Cloud Platform Infrastructure](./docs/setup-cloud-infra.md)
 - [Application Development](./docs/dev.md)
 - [Application Testing](./docs/testing.md)
-- [Application Deployment](./docs/deploy.md)
+- [Application Deployment](./docs/deploy.md)git 
