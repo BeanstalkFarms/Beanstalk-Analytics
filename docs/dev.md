@@ -100,12 +100,12 @@ The start the API development stack, run one of these commands
 
 ```bash
 # Run API on static builds 
-make api-local-bucket-local 
-make api-local-bucket-gcp 
+make api-dev-bucket-local 
+make api-dev-bucket-gcp 
 
 # Run API on hot-reloaded builds 
-make debug-api-local-bucket-local
-make debug-api-local-bucket-gcp 
+make debug-api-dev-bucket-local
+make debug-api-dev-bucket-gcp 
 ```
 
 The hot-reload development environment works better with the emulator backend. The hot-reload command 

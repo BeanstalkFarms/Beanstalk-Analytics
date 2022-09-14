@@ -110,14 +110,14 @@ endef
 # Run google cloud function locally for testing with local backend. 
 # Note: Run `make local-bucket` prior to executing this command. 
 # 		This is required so that you can view the logs for the local emulator. 
-.PHONY: api-local-bucket-local
-api-local-bucket-local: STORAGE_EMULATOR_HOST=$(STORAGE_EMULATOR_HOST_LOCAL)
-api-local-bucket-local: build-api-quiet
+.PHONY: api-dev-bucket-local
+api-dev-bucket-local: STORAGE_EMULATOR_HOST=$(STORAGE_EMULATOR_HOST_LOCAL)
+api-dev-bucket-local: build-api-quiet
 	@$(call run_local_api)
 
 # Run google cloud function locally for testing with gcp backend. 
-.PHONY: api-local-bucket-gcp
-api-local-bucket-gcp: build-api-quiet
+.PHONY: api-dev-bucket-gcp
+api-dev-bucket-gcp: build-api-quiet
 	@$(call run_local_api)
 
 # Executes nodemon to watch source directory for changes. Each time a change 
@@ -133,14 +133,14 @@ define run_nodemon
 endef 
 
 # Local debugging of cloud function with local backend. 
-.PHONY: debug-api-local-bucket-local
-debug-api-local-bucket-local: build-api-quiet
-	@$(call run_nodemon, "api-local-bucket-local")
+.PHONY: debug-api-dev-bucket-local
+debug-api-dev-bucket-local: build-api-quiet
+	@$(call run_nodemon, "api-dev-bucket-local")
 
 # Local debugging of cloud function with gcp backend. 
-.PHONY: debug-api-local-bucket-gcp
-debug-api-local-bucket-gcp: build-api-quiet
-	@$(call run_nodemon, "api-local-bucket-gcp")
+.PHONY: debug-api-dev-bucket-gcp
+debug-api-dev-bucket-gcp: build-api-quiet
+	@$(call run_nodemon, "api-dev-bucket-gcp")
 
 
 # RULES - BACKEND - Local Api Unit Testing 
