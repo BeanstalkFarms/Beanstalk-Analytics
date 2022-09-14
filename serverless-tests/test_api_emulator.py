@@ -19,8 +19,6 @@ logging.basicConfig(level=logging.DEBUG)
 
 PATH_SERVERLESS_CODE_DEPLOY = Path(os.environ['PATH_SERVERLESS_CODE_DEPLOY'])
 RPATH_NOTEBOOKS = Path(os.environ['RPATH_NOTEBOOKS'])
-STORAGE_EMULATOR_HOST_LOCAL = os.environ['STORAGE_EMULATOR_HOST_LOCAL']
-RPATH_NOTEBOOKS_TEST = os.environ['RPATH_NOTEBOOKS_TEST']
 
 
 @pytest.fixture
@@ -35,8 +33,7 @@ def notebook_data():
 
 
 @mock.patch.dict(os.environ, {
-    "RPATH_NOTEBOOKS": str(PATH_SERVERLESS_CODE_DEPLOY / RPATH_NOTEBOOKS_TEST), 
-    "STORAGE_EMULATOR_HOST": STORAGE_EMULATOR_HOST_LOCAL,
+    "RPATH_NOTEBOOKS": str(PATH_SERVERLESS_CODE_DEPLOY / RPATH_NOTEBOOKS), 
 })
 class TestApiLocal: 
 

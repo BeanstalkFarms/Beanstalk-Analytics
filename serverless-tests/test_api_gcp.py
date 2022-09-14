@@ -19,12 +19,10 @@ logging.basicConfig(level=logging.DEBUG)
 
 PATH_SERVERLESS_CODE_DEPLOY = Path(os.environ['PATH_SERVERLESS_CODE_DEPLOY'])
 RPATH_NOTEBOOKS = Path(os.environ['RPATH_NOTEBOOKS'])
-BUCKET_TEST = os.environ['BUCKET_TEST']
 
 
 @mock.patch.dict(os.environ, {
     "RPATH_NOTEBOOKS": str(PATH_SERVERLESS_CODE_DEPLOY / RPATH_NOTEBOOKS), 
-    "NEXT_PUBLIC_STORAGE_BUCKET_NAME": BUCKET_TEST,
 })
 class TestApiGCP: 
 

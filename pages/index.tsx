@@ -7,6 +7,7 @@ import Page from "../components/Page";
 if (!process.env.NEXT_PUBLIC_STORAGE_BUCKET_NAME) throw new Error('Environment: Missing bucket');
 if (!process.env.NEXT_PUBLIC_CDN) throw new Error('Environment: Missing CDN address'); 
 
+// const apiUrl = new URL(`${process.env.}`)
 const bucketUrl = new URL(`${process.env.NEXT_PUBLIC_CDN}/${process.env.NEXT_PUBLIC_STORAGE_BUCKET_NAME}`);
 
 const Chart : React.FC<{ name: string; height?: number; }> = ({ name, height = 300 }) => {
@@ -15,7 +16,7 @@ const Chart : React.FC<{ name: string; height?: number; }> = ({ name, height = 3
   
   useEffect(() => {
     (async () => {
-      const url = new URL(`${bucketUrl}/${name.toLowerCase()}.json`);
+      const url = new URL(`${bucketUrl}/schemas/${name.toLowerCase()}.json?${Date.now()}`);
       try {
         setSpec(
           await fetch(url.toString())

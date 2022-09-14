@@ -1,2 +1,2 @@
 pyyaml 
-gcp_storage_emulator
+gcp_storage_emulator # TODO: Once CORS issue is fixed in the library, put min version requirement on this. 

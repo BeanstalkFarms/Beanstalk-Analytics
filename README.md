@@ -12,14 +12,13 @@
 ## Application Architecture 
 
 This application consists of
-- A frontend application (next.js) contained in various top level directories.
+
+- A frontend (next.js).
   - The frontend ingests and visualizes data created by the serverless backend.
 - Google Cloud Platform Infrastructure 
   - A GCP storage bucket containing vega-lite schemas and other application data.  
-- A serverless backend in `serverless` 
-  - A single http request handler is defined in `serverless/main.py`. This handler 
-  serves as a router that routes incoming requests to the appropriate internal handler 
-  function. 
+- A serverless api
+  - Responds to frontend requests, manages objects in the storage bucket. 
 
 ## Contributor Documentation 
 
@@ -37,4 +36,4 @@ Right now, this really just for **TBIQ**.
 - [Google Cloud Platform Infrastructure](./docs/setup-cloud-infra.md)
 - [Application Development](./docs/dev.md)
 - [Application Testing](./docs/testing.md)
-- [Application Deployment](./docs/deploy.md)git 
+- [Application Deployment](./docs/deploy.md) 

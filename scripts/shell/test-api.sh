@@ -38,4 +38,4 @@ echo "------------------------------------------------------------------------"
 echo "Launching api in dev mode from ${PATH_SERVERLESS_CODE_DEPLOY}" 
 echo "------------------------------------------------------------------------"
 cd "${PATH_SERVERLESS_CODE_DEPLOY}"; \
-    functions-framework --target="${CLOUD_FUNCTION_NAME}"
+    functions-framework --target="${CLOUD_FUNCTION_NAME}" --debug
