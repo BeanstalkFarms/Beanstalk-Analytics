@@ -151,21 +151,11 @@ debug-api-local-bucket-gcp: build-api-quiet
 # cloud function sourced from the build directory, to ensure 
 # that the build process operates as expected. 
 
-.PHONY: unit-test-api-local
-unit-test-api-local: STORAGE_EMULATOR_HOST=$(STORAGE_EMULATOR_HOST_LOCAL)
-unit-test-api-local: RPATH_NOTEBOOKS=$(RPATH_NOTEBOOKS_TEST) # Overrides default 
-unit-test-api-local: build-api-quiet
-	@pytest "${PATH_SERVERLESS_CODE_DEV}/tests/test_api_local.py" \
-		#  --log-cli-level DEBUG \
-		 -s -vvv
-	@rmdir .cloudstorage # used by emulator for local data storage 
-
-.PHONY: unit-test-api-gcp
-unit-test-api-gcp: NEXT_PUBLIC_STORAGE_BUCKET_NAME=$(BUCKET_TEST)
-unit-test-api-gcp: build-api-quiet
-	pytest "${PATH_SERVERLESS_CODE_DEV}/tests/test_api_gcp.py" \
-		#  --log-cli-level DEBUG \
-		 -s -vvv
+.PHONY: unit-test-api
+unit-test-api: build-api-quiet
+	@pytest "${PATH_SERVERLESS_CODE_DEV}/tests/" -s -vvv \
+		#  --log-cli-level DEBUG 
+	@rmdir .cloudstorage
 
 # RULES - BACKEND - Api Deployment 
 # -----------------------------------------------------------------------------------------------
@@ -175,6 +165,7 @@ deploy-api: GCLOUD_ENV_FILE=.env.yml
 deploy-api: RPATH_NOTEBOOKS=$(RPATH_NOTEBOOKS_PROD)
 deploy-api: build-api 
 # TODO: What is the right amount of memory for the cloud function? 
+# 		This is set conservatively high right now. 
 	@echo "Creating temporary environment file ${GCLOUD_ENV_FILE}"
 	@python scripts/python/create_gcloud_env_file.py \
 		--file $(GCLOUD_ENV_FILE) \

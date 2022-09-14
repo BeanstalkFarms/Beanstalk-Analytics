@@ -3,11 +3,12 @@ subgrounds
 numpy
 pandas
 altair
+jsonschema==3.* # See https://github.com/altair-viz/altair/issues/2496
 nbformat
 notebook
 google-cloud-storage
 google-api-python-client
 functions-framework==3.*
 python-dotenv # TODO: Can we make this a dev dependency?
-python-box # TODO: convert Box's to dataclasses 
+python-box # TODO: convert Box's to dataclasses to remove this dep. 
 # python-graphql-client 
