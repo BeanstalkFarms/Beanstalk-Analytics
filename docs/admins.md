@@ -40,6 +40,12 @@ These steps create a bucket where anyone who has the URL can view its contents.
    2. Run `gsutil cors set cors.json gs://BUCKET_NAME`.
    This ensures that bucket resources are accessible from any origin. 
 
+To run the application, you should create three buckets (all following this same process). 
+
+1. A **testing** bucket, used for unit tests. 
+2. A **dev** bucket, used during development while testing new features and bug fixes. 
+3. A **prod** bucket, used as the production backend for the application. 
+
 Test that everything is working by uploading a test file to the bucket, then 
 using the bucket's public url (with the file name appended) to view the contents. 
 
@@ -109,3 +115,14 @@ curl "http://localhost:8080/api?name=field"
 ```bash
 curl "http://localhost:8080/api?name=FieldOverview&force_refresh=True"
 ```
+
+#### Serverless API Testing 
+
+The name of this is `BUCKET_TEST` in the `Makefile`. 
+- This bucket is used by the unit test in `serverless-tests/test_api_gcp.py`. This unit test 
+  - Builds and deploys a local version of the api. 
+  - Executes a series of calls to the api to refresh objects created by all production notebooks. 
+  - Reads these new objects from the test bucket, then validates they have the expected structure 
+  and can be rendered as vega-lite charts. 
+  - Note: This test only checks that the notebook outputs are written upon api request and that 
+  they have the correct structure. Out local api test in `serverless-tests/test_api_emulator.py`
