@@ -145,15 +145,9 @@ debug-api-local-bucket-gcp: build-api-quiet
 
 # RULES - BACKEND - Local Api Unit Testing 
 # -----------------------------------------------------------------------------------------------
-# Note: tests must be run within the source directory, not the 
-# build directory due to how the tests import dependencies. 
-# However, the tests use a simulated local deployment of the 
-# cloud function sourced from the build directory, to ensure 
-# that the build process operates as expected. 
-
 .PHONY: unit-test-api
 unit-test-api: build-api-quiet
-	@pytest "${PATH_SERVERLESS_CODE_DEV}/tests/" -s -vvv \
+	@pytest "./serverless-tests/test_api_gcp.py" -s -vvv \
 		#  --log-cli-level DEBUG 
 	@rmdir .cloudstorage
 

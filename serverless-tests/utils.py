@@ -7,10 +7,10 @@ from pathlib import Path
 from urllib.parse import urlencode
 
 import altair as alt 
-# TODO: Add link to the functions_framework test where this is used 
-from functions_framework import create_app
 from google.cloud.storage._helpers import _get_storage_host
 
+# TODO: Add link to the functions_framework test where this is used 
+from functions_framework import create_app
 
 """
 WARNING: DO NOT TRY TO IMPORT ENVIRONMENT VARIABLES OUTSIDE OF FUNCTION SCOPES
@@ -22,9 +22,16 @@ purpose, so we want to keep these functions idempotent.
 def get_test_api_client():
     """Testing api client for locally deployed cloud function 
 
-    DO NOT TRY TO MAKE THIS A FIXTURE. Not sure why right now, but 
-    the notebook path gets messed up when this is a fixture but not 
-    when this is initialized within each test. 
+    The function `create_app` has some really nasty side effects 
+    that are difficult to work around. Internally, it dynamically 
+    creates a module for the file containing the function. In our 
+    testing setup, we test with multiple different patches on 
+    os.environ. I tried and failed to put tests in different files 
+    but since the serverless build isn't a package (it's just a 
+    module), things got tricky and I reverted to the separate 
+    test files approach. 
+
+    DO NOT TRY TO MAKE THIS A FIXTURE. I WILL HURT YOU IF YOU DO! 
     """
     CLOUD_FUNCTION_NAME = os.environ['CLOUD_FUNCTION_NAME']
     PATH_SERVERLESS_CODE_DEPLOY = os.environ['PATH_SERVERLESS_CODE_DEPLOY']

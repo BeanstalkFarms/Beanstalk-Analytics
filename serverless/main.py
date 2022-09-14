@@ -17,6 +17,6 @@ def bean_analytics_http_handler(request):
     if not handler: 
         return (
             f"Invalid url path {request.path}\n"
-            f"Valid rourtes are {[str(r) for r in ROUTER.keys()]}."
+            f"Valid routes are {[str(r) for r in ROUTER.keys()]}."
         ), 404 
     return handler(request)
