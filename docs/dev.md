@@ -71,30 +71,39 @@ of the code bundle as it will appear when uploaded to GCP (taking into account t
 don't want to upload when deploying, so it's good to run `make-build-api` prior to 
 deployments prior to ensure that the source code bundle is as expected. 
 
-### Backend (API) Local Development 
+## Local Development Environment 
 
-Prior to deploying the serverless function, it can be tested in a local development environment. 
-
-The local api development environment can run with two kinds of backends
+The local development environment for the full-stack application supports two kinds of backends 
 
 1. Emulator storage bucket
 2. GCP storage bucket 
 
-While developing on the API, development should first be done with the emulator bucket backend, 
-and once things are working in that environment, you should try using a GCP bucket. 
+While developing, it is recommended to initially work with the emulator bucket backend, to avoid 
+issuing unnecessary requests to google cloud. Once things are working as expected with the emulator, 
+you should switch to testing with the gcp bucket backend. 
 
-The local api stack can be run on static builds (not responding to changes in source directory)
-with the following two commands. 
+When issuing commands to start either the frontend or API with either the emulator or GCP backends, 
+make sure to issue commands to both parts of the application that use the same backend. 
 
-```bash
-make api-local-bucket-local
-make api-local-bucket-gcp
-```
-
-The stack can also be run using a hot-reload build (leveraging `nodemon` to re-build when changes
-are detected). This kind of environment can be created with the following two commands. 
+Also, if you are planning on running the development stack with the emulator backend, you must 
+separately start the emulator server by running
 
 ```bash 
+make local-bucket
+``` 
+
+### Backend (API) Local Development Environment  
+
+The API supports both a static and hot-reload development stack. 
+
+The start the API development stack, run one of these commands  
+
+```bash
+# Run API on static builds 
+make api-local-bucket-local 
+make api-local-bucket-gcp 
+
+# Run API on hot-reloaded builds 
 make debug-api-local-bucket-local
 make debug-api-local-bucket-gcp 
 ```
@@ -102,10 +111,10 @@ make debug-api-local-bucket-gcp
 The hot-reload development environment works better with the emulator backend. The hot-reload command 
 with the GCP backend is still being worked on (might need to add some delays in here post-rebuild???). 
 
-### Issuing requests to the Locally Deployed Backend (API) 
+#### Issuing requests to the Locally Deployed Backend (API) 
 
-Once the API is deployed locally, you'll need to send requests to it in order to perform testing. 
-You can use whatever tool you like (postman, curl, etc.), but here are some useful curl commands
+If you want to test the backend in isolation (without frontend running locally), you can simply 
+send HTTP commands to it using your preferred tool. Here are some useful testing commands. 
 
 ```bash 
 # template 
@@ -120,45 +129,13 @@ curl "http://localhost:8080/charts/refresh?data=silo,fieldoverview"
 curl "http://localhost:8080/charts/refresh?data=*"
 ```
 
-### Backend (API) Testing 
+### Frontend Local Development Environment  
 
-After changing the implementation of the api handler, and testing things using the local 
-development stack, the next step is to the the unit test suite. 
+<!-- TODO: Does the frontend support hot-reloading? -->
 
-The unit test suite consists of two test files each using different environment configurations
+The start the frontend development stack, run one of these commands  
 
-- `serverless-tests/test_api_emulator.py`
-  - Uses the local storage bucket. 
-  - Uses test notebooks in `serverless/notebooks/testing/`. 
-  - Checks that all API routes correctly handle incoming requests. 
-  - Checks that the specs returned by the testing notebooks contain expected data. 
-- `serverless-tests/test_api_gcp.py`
-  - Uses the GCP testing bucket. 
-  - Uses the prod notebooks in `serverless/notebooks/prod/`. 
-  - Force refreshes all possible production notebooks through the API.
-  - Validates that the objects produced to the test bucket have the expected structure, 
-  and that the schema portion of the object is a valid vega-lite schema. 
-
-You can run these test files in isolation or together using the following commands 
-
-```bash 
-make unit-test-api-emulator # local bucket 
-make unit-test-api-gcp # GCP bucket 
-make unit-test-api # local and GCP bucket 
-``` 
-
-### Backend (API) Deployment 
-
-To deploy (or re-deploy) the handler as a google cloud function, run 
-
-```bash 
-make deploy-api
-```
-
-To test that the deployed function is operating as expected, execute an HTTP request against it's endpoint 
-which can be found through the GCP console.  
-
-```bash 
-curl -m 70 -X GET https://us-east1-bean-analytics-http-handler.cloudfunctions.net/bean_analytics_http_handler?data=silo \
--H "Authorization: bearer $(gcloud auth print-identity-token)"
+```bash
+make frontend-dev-bucket-local
+make frontend-dev-bucket-gcp
 ```
