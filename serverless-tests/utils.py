@@ -50,7 +50,7 @@ def call_api_validate(
     
     Returns the json parsed data from the response. 
     """
-    resp = api.get(f"/charts/refresh?{urlencode(query_params)}")
+    resp = api.get(f"/schemas/refresh?{urlencode(query_params)}")
     data = json.loads(resp.data)
     assert resp.status_code == 200
     assert set(expected_schema_names) == set(data.keys())

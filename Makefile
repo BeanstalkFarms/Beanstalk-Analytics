@@ -39,6 +39,8 @@ STORAGE_EMULATOR_HOST_LOCAL=http://$(STORAGE_EMULATOR_HOST_NAME):$(STORAGE_EMULA
 
 # SERVERLESS API 
 # --------------
+# Url for the local api deployment 
+LOCAL_API_URL=http://127.0.0.1:8080
 # Build directory for source code bundle of google cloud function 
 PATH_SERVERLESS_CODE_DEPLOY=.build/serverless
 # The name of function in main.py of the build directory that is our google cloud function 
@@ -61,8 +63,14 @@ SUBGRAPH_URL=https://graph.node.bean.money/subgraphs/name/beanstalk-testing
 # -----------------------------------------------------------------------------------------------
 # RULES - FRONTEND 
 # -----------------------------------------------------------------------------------------------
+frontend-dev-%: NEXT_PUBLIC_API_URL=$(LOCAL_API_URL)
+frontend-start-%: NEXT_PUBLIC_API_URL=$(LOCAL_API_URL)
+
 frontend-%-bucket-local: NEXT_PUBLIC_CDN=$(STORAGE_EMULATOR_HOST_LOCAL)
 frontend-%-bucket-local: NEXT_PUBLIC_STORAGE_BUCKET_NAME=$(BUCKET_EMULATOR)
+
+frontend-%-bucket-gcp: NEXT_PUBLIC_CDN=https://storage.googleapis.com
+frontend-%-bucket-gcp: NEXT_PUBLIC_STORAGE_BUCKET_NAME=$(BUCKET_DEV)
 
 .PHONY: frontend-dev-bucket-local
 frontend-dev-bucket-local: 
@@ -71,9 +79,6 @@ frontend-dev-bucket-local:
 .PHONY: frontend-dev-bucket-gcp
 frontend-dev-bucket-gcp: 
 	@yarn dev 
-
-frontend-%-bucket-gcp: NEXT_PUBLIC_CDN=https://storage.googleapis.com
-frontend-%-bucket-gcp: NEXT_PUBLIC_STORAGE_BUCKET_NAME=$(BUCKET_DEV)
 
 .PHONY: frontend-start-bucket-local
 frontend-start-bucket-local: 

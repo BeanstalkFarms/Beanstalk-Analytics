@@ -32,7 +32,7 @@ The application uses a single serverless google cloud function to serve all clie
 This function serves as a router that delegates to internal handlers to 
 service different types of requests. Here are the currently supported routes: 
 
-- `/charts/refresh`
+- `/schemas/refresh`
   - Takes one or more chart names as input. For each chart name, we optionally re-compute 
   the corresponding schema. When a schema is re-computed, it is written to the storage 
   bucket.  
@@ -118,15 +118,15 @@ send HTTP commands to it using your preferred tool. Here are some useful testing
 
 ```bash 
 # template 
-curl "http://localhost:8080/charts/refresh?data=<data>&force_refresh=<force_refresh>" 
+curl "http://localhost:8080/schemas/refresh?data=<data>&force_refresh=<force_refresh>" 
 # examples
-curl "http://localhost:8080/charts/refresh?data=silo"
+curl "http://localhost:8080/schemas/refresh?data=silo"
 
-curl "http://localhost:8080/charts/refresh?data=silo&force_refresh=true"
+curl "http://localhost:8080/schemas/refresh?data=silo&force_refresh=true"
 
-curl "http://localhost:8080/charts/refresh?data=silo,fieldoverview"
+curl "http://localhost:8080/schemas/refresh?data=silo,fieldoverview"
 
-curl "http://localhost:8080/charts/refresh?data=*"
+curl "http://localhost:8080/schemas/refresh?data=*"
 ```
 
 ### Frontend Local Development Environment  

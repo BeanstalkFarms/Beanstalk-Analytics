@@ -1,6 +1,7 @@
 import json 
 import datetime 
 import logging 
+from typing import Tuple  
 
 from utils_serverless.utils import StorageClient, NotebookRunner
 
@@ -14,7 +15,7 @@ sc = StorageClient()
 nbr = NotebookRunner()
 
 
-def handler_charts_refresh(request): 
+def handler_charts_refresh(request) -> Tuple[any, int]: 
     """Recalculates one or more chart objects 
     
     Matches incoming requests to one or more jupyter notebook(s). 
@@ -66,7 +67,6 @@ def handler_charts_refresh(request):
                 schema = nbr.execute(schema_name)
                 run_time_seconds = nbr.execute._decorated_run_time_seconds
                 data = {"timestamp": cur_dtime.isoformat(), "schema": schema}
-                logger.info(f"AYYY SCHEMA {schema_name} RECOMPUTED AT {cur_dtime.isoformat()}")
                 sc.upload(blob, json.dumps(data))
             else: 
                 status = "use_cached"

@@ -5,10 +5,11 @@ import Module from "../components/Module";
 import Page from "../components/Page";
 
 if (!process.env.NEXT_PUBLIC_STORAGE_BUCKET_NAME) throw new Error('Environment: Missing bucket');
-if (!process.env.NEXT_PUBLIC_CDN) throw new Error('Environment: Missing CDN address'); 
+if (!process.env.NEXT_PUBLIC_CDN) throw new Error('Environment: Missing storage url'); 
+if (!process.env.NEXT_PUBLIC_API_URL) throw new Error('Environment: Missing api url'); 
 
-// const apiUrl = new URL(`${process.env.}`)
-const bucketUrl = new URL(`${process.env.NEXT_PUBLIC_CDN}/${process.env.NEXT_PUBLIC_STORAGE_BUCKET_NAME}`);
+const urlBucket = new URL(`${process.env.NEXT_PUBLIC_CDN}/${process.env.NEXT_PUBLIC_STORAGE_BUCKET_NAME}`);
+const urlApi = new URL(`${process.env.NEXT_PUBLIC_API_URL}`); 
 
 const Chart : React.FC<{ name: string; height?: number; }> = ({ name, height = 300 }) => {
   const [spec, setSpec] = useState<null | object>(null);
@@ -16,13 +17,26 @@ const Chart : React.FC<{ name: string; height?: number; }> = ({ name, height = 3
   
   useEffect(() => {
     (async () => {
-      const url = new URL(`${bucketUrl}/${name.toLowerCase()}.json?${Date.now()}`);
+      const reqUrlApi = new URL(`${urlApi}schemas/refresh?data=${name.toLowerCase()}&${Date.now()}`);
+      const reqUrlBucket = new URL(`${urlBucket}/schemas/${name.toLowerCase()}.json?${Date.now()}`);
       try {
-        setSpec(
-          await fetch(url.toString())
-            .then((r) => r.json())
-        )
+        const apiResp = await fetch(reqUrlApi.toString()).then(r => r.json()); 
+        // status: Either 'recomputed' or 'use_cached' 
+        // run_time_seconds: The number of seconds it took to generate the chart on the server 
+        const { status, run_time_seconds } = apiResp; 
+        // timestamp: The timestamp at which the schema was created 
+        const { schema, timestamp } = await fetch(reqUrlBucket.toString()).then(r => r.json()); 
+        setSpec(schema); 
         setStatus('ready');
+        // const preflight = await fetch(url.toString(), {
+        //   "method": "OPTIONS", 
+        //   // "mode": "cors", 
+        //   "headers": {
+        //     "Access-Control-Request-Method": "GET"
+        //   }
+        // });
+        // console.log("Preflight response"); 
+        // console.log(preflight); 
       } catch(e) {
         console.error(e);
         setStatus('error');
