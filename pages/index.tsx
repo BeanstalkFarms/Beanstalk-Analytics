@@ -16,7 +16,7 @@ const Chart : React.FC<{ name: string; height?: number; }> = ({ name, height = 3
   
   useEffect(() => {
     (async () => {
-      const url = new URL(`${bucketUrl}/schemas/${name.toLowerCase()}.json?${Date.now()}`);
+      const url = new URL(`${bucketUrl}/${name.toLowerCase()}.json?${Date.now()}`);
       try {
         setSpec(
           await fetch(url.toString())
