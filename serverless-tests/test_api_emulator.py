@@ -61,8 +61,7 @@ class TestApiLocal:
         return schema_timestamps
 
     def test_host(self): 
-        # Tests that storage host used by api is google cloud 
-        assert _get_storage_host() == os.environ['STORAGE_EMULATOR_HOST_LOCAL']
+        assert _get_storage_host() == "http://localhost:9023"
 
     CHARTS_REFRESH_PARAMETERIZE = [
         # Refresh single chart 

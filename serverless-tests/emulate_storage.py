@@ -1,5 +1,6 @@
 import os
 import logging
+from urllib.parse import urlparse
 from gcp_storage_emulator.server import create_server
 
 
@@ -7,15 +8,15 @@ logger = logging.getLogger(__name__)
 
 
 def get_emulator_server(): 
-	host = os.environ['STORAGE_EMULATOR_HOST_NAME']
-	port = int(os.environ['STORAGE_EMULATOR_PORT'])
+	url = urlparse(os.envion['STORAGE_EMULATOR_HOST'])
+	host = url.netloc 
+	port = url.port 
+	assert host == "localhost" # emulator should only run locally
 	bucket = os.environ["NEXT_PUBLIC_STORAGE_BUCKET_NAME"]
 	server = create_server(
 		host, port, in_memory=False, default_bucket=bucket
 	)
-	logger.info(
-		f"Created emulator server at {host}:{port} for bucket={bucket}"
-	)
+	logger.info(f"Created emulator server at {url} for bucket {bucket}")
 	return server 
 
 

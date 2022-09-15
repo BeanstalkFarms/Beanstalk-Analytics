@@ -1,6 +1,4 @@
-# Development 
-
-This document covers the process developers will follow to work on the application.
+# Development Guide 
 
 Most of the commands and scripts that need to be executed throughout the development 
 process are contained within a `Makefile`. This allows us to run many different kinds 
@@ -11,7 +9,7 @@ developer experience.
 
 The frontend leverages the [Next.js](https://nextjs.org/) React development framework.
 
-Dependencies are managed by yarn. Follow [this](https://yarnpkg.com/getting-started/install)
+Dependencies are managed via yarn. Follow [this](https://yarnpkg.com/getting-started/install)
 guide to install yarn on your machine. 
 
 ### Frontend Dependencies 
@@ -26,8 +24,7 @@ yarn
 
 The application uses a single serverless google cloud function to serve all client requests.
 
-- This handler is called `bean_analytics_http_handler` and it exists in 
-`serverless/main.py`.
+- This handler is called `bean_analytics_http_handler` and it exists in `serverless/main.py`.
 
 This function serves as a router that delegates to internal handlers to 
 service different types of requests. Here are the currently supported routes: 
@@ -36,11 +33,47 @@ service different types of requests. Here are the currently supported routes:
   - Takes one or more chart names as input. For each chart name, we optionally re-compute 
   the corresponding schema. When a schema is re-computed, it is written to the storage 
   bucket.  
-  - The schema is recomputed when a schema for the chart does not exist, is older than 
-  some number of seconds, or is force refreshed. 
+  - The schema is recomputed when a schema does not exist, is older than some number of 
+  seconds, or is force refreshed. 
   - The schemas are computed by running jupyter notebooks that exist within 
   `serverless/notebooks/prod`. When building the code bundle to deploy the serverless 
   function, these notebooks are processed into a modified (and more efficient) form. 
+
+### Backend Environment and Dependencies 
+
+The backend is written in python, so you will need to set up a python (3.10) virtual 
+environment for backend development. The application is agnostic to the tool that you 
+use for managing environment, but I prefer conda personally. 
+
+[Here](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html) is a 
+guide for installing conda.  
+
+[Here](https://docs.conda.io/projects/conda/en/latest/user-guide/getting-started.html#managing-envs) is a 
+guide on managing conda environments. 
+
+Assuming you have conda installed, create a python 3.10 environment. Here are the commands to 
+create, activate, and deactivate your virtual development environment. 
+
+```bash 
+# create 
+conda create --name bean-analytics python=3.10
+# activate
+conda activate bean-analytics 
+# de-activate 
+conda deactivate 
+```
+
+Within your conda (or other platform) virtual environment, install the dependencies in both 
+`requirements.txt` and `requirements.dev.txt`. 
+
+I personally use pip for this 
+
+```bash 
+python -m pip install -r requirements.txt -r requirements-dev.txt
+```
+
+Whenever you are developing the application, I recommend having this environment active. 
+Many `Makefile` commands require it. 
 
 ### Backend (API) Builds 
 
@@ -49,7 +82,8 @@ the version of this code that we end up deploying is a little different from the
 During the build process, we do the following. 
 
 - Convert `.env` to `.env.yml`, since google requires environment variables files to be in 
-  yml format. This file is created and destroyed transparently during the build process. 
+  yml format. This file is created and destroyed transparently during the build process. It 
+  only includes a necessary subset of variables from the build command's runtime context. 
 - Notebooks are pre-processed, combining all source code into a single cell. Since we 
   execute the notebooks using a notebook client, this removes the storage of intermediate
   (and unnecessary) data outputs, speeding up execution and lowering the memory requirements. 
@@ -58,8 +92,10 @@ The built code bundle exists in `.build/serverless`. There are two development c
 initiate builds. 
 
 ```bash 
-make build-api # produces informational textual output 
-make build-api-quiet # produces no textual output
+# produces informational textual output 
+make build-api       
+# produces no textual output
+make build-api-quiet 
 ``` 
 
 These build commands are pre-requisites to many other makefile rules, so you won't often 
@@ -69,42 +105,65 @@ The command `make build-api` has the nice feature that it logs the directory str
 of the code bundle as it will appear when uploaded to GCP (taking into account the 
 `.gcloudignore` file). This is useful as our source directory has lots of files that we 
 don't want to upload when deploying, so it's good to run `make-build-api` prior to 
-deployments prior to ensure that the source code bundle is as expected. 
+deployments prior to ensure that the source code bundle looks like you expect it to.
 
 ## Local Development Environment 
 
-The local development environment for the full-stack application supports two kinds of backends 
+The local development environment consists of 
 
-1. Emulator storage bucket
-2. GCP storage bucket 
+- Locally deployed google cloud function on `http://localhost:8080`
+- Locally deployed frontend on `http://localhost:3000`
+- Two kinds of storage backends 
+  1. Emulator storage bucket
+  2. GCP storage bucket 
 
 While developing, it is recommended to initially work with the emulator bucket backend, to avoid 
 issuing unnecessary requests to google cloud. Once things are working as expected with the emulator, 
 you should switch to testing with the gcp bucket backend. 
 
-When issuing commands to start either the frontend or API with either the emulator or GCP backends, 
-make sure to issue commands to both parts of the application that use the same backend. 
+There are separate commands to start the frontend and the API, and it is recommended to start both 
+in different terminal windows so you have access to the logs for both. When issuing commands to start 
+both the API and the frontend, ensure that both commands you issue target the same backend to avoid 
+issues. These specific commands will be covered in the sections below. 
 
-Also, if you are planning on running the development stack with the emulator backend, you must 
-separately start the emulator server by running
+Additionally, if using the emulator backend, start the emulator in a separate terminal window 
+(again so you can see the logs) by running 
 
 ```bash 
 make local-bucket
 ``` 
 
-### Backend (API) Local Development Environment  
+### Local Development Environment - Frontend
+
+The frontend supports both a static and hot-reload development stack. 
+
+The start the frontend development stack, run one of these commands  
+
+```bash
+# static build / emulator backend 
+make frontend-dev-bucket-local
+# static build / gcp backend 
+make frontend-dev-bucket-gcp
+# hot-reload build / emulator backend 
+make frontend-start-bucket-local
+# hot-reload build / gcp backend 
+make frontend-start-bucket-gcp
+```
+
+### Local Development Environment - Backend (API) 
 
 The API supports both a static and hot-reload development stack. 
 
 The start the API development stack, run one of these commands  
 
 ```bash
-# Run API on static builds 
+# static build / emulator backend 
 make api-dev-bucket-local 
+# static build / gcp backend 
 make api-dev-bucket-gcp 
-
-# Run API on hot-reloaded builds 
+# hot-reload build / emulator backend 
 make debug-api-dev-bucket-local
+# hot-reload build / gcp backend 
 make debug-api-dev-bucket-gcp 
 ```
 
@@ -113,7 +172,7 @@ with the GCP backend is still being worked on (might need to add some delays in 
 
 #### Issuing requests to the Locally Deployed Backend (API) 
 
-If you want to test the backend in isolation (without frontend running locally), you can simply 
+If you want to test the backend in isolation (without the frontend running locally), you can simply 
 send HTTP commands to it using your preferred tool. Here are some useful testing commands. 
 
 ```bash 
@@ -129,13 +188,3 @@ curl "http://localhost:8080/schemas/refresh?data=silo,fieldoverview"
 curl "http://localhost:8080/schemas/refresh?data=*"
 ```
 
-### Frontend Local Development Environment  
-
-<!-- TODO: Does the frontend support hot-reloading? -->
-
-The start the frontend development stack, run one of these commands  
-
-```bash
-make frontend-dev-bucket-local
-make frontend-dev-bucket-gcp
-```

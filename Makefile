@@ -16,7 +16,6 @@ export
 # -----------------------------------
 NEXT_PUBLIC_CHAIN_ID=1
 NEXT_PUBLIC_RPC_URL=https://eth-mainnet.gateway.pokt.network/v1/5f3453978e354ab992c4da79
-NEXT_PUBLIC_STORAGE_BUCKET_NAME=beanstalk-analytics-test-bucket# TODO: Not static 
 
 # STORAGE / BUCKETS 
 # -----------------
@@ -30,12 +29,10 @@ BUCKET_PROD=beanstalk-analytics-bucket-prod
 BUCKET_EMULATOR=beanstalk-analytics-bucket-local
 # Production storage host is gcloud storage 
 STORAGE_HOST=https://storage.googleapis.com
-# Local storage host (used for testing)
+# Local storage host (used for testing). Private and only set in env for certain commands 
 # Not a well documented feature within the API but here's the PR that added in the feature
 # https://github.com/googleapis/google-cloud-python/pull/9219
-STORAGE_EMULATOR_HOST_NAME=localhost
-STORAGE_EMULATOR_PORT=9023
-STORAGE_EMULATOR_HOST_LOCAL=http://$(STORAGE_EMULATOR_HOST_NAME):$(STORAGE_EMULATOR_PORT)
+_STORAGE_EMULATOR_HOST=http://localhost:9023
 
 # SERVERLESS API 
 # --------------
@@ -66,7 +63,7 @@ SUBGRAPH_URL=https://graph.node.bean.money/subgraphs/name/beanstalk-testing
 frontend-dev-%: NEXT_PUBLIC_API_URL=$(LOCAL_API_URL)
 frontend-start-%: NEXT_PUBLIC_API_URL=$(LOCAL_API_URL)
 
-frontend-%-bucket-local: NEXT_PUBLIC_CDN=$(STORAGE_EMULATOR_HOST_LOCAL)
+frontend-%-bucket-local: NEXT_PUBLIC_CDN=$(_STORAGE_EMULATOR_HOST)
 frontend-%-bucket-local: NEXT_PUBLIC_STORAGE_BUCKET_NAME=$(BUCKET_EMULATOR)
 
 frontend-%-bucket-gcp: NEXT_PUBLIC_CDN=https://storage.googleapis.com
@@ -127,6 +124,7 @@ build-api-quiet:
 # be run when testing the application with a local backend. 
 .PHONY: local-bucket
 local-bucket: NEXT_PUBLIC_STORAGE_BUCKET_NAME=$(BUCKET_EMULATOR)
+local-bucket: STORAGE_EMULATOR_HOST=$(_STORAGE_EMULATOR_HOST)
 local-bucket: 
 	@python "serverless-tests/emulate_storage.py"
 
@@ -142,7 +140,7 @@ endef
 # Note: Run `make local-bucket` prior to executing this command. 
 # 		This is required so that you can view the logs for the local emulator. 
 .PHONY: api-dev-bucket-local
-api-dev-bucket-local: STORAGE_EMULATOR_HOST=$(STORAGE_EMULATOR_HOST_LOCAL)
+api-dev-bucket-local: STORAGE_EMULATOR_HOST=$(_STORAGE_EMULATOR_HOST)
 api-dev-bucket-local: NEXT_PUBLIC_STORAGE_BUCKET_NAME=$(BUCKET_EMULATOR)
 api-dev-bucket-local: build-api-quiet
 	@$(call run_local_api)
@@ -185,7 +183,7 @@ unit-test-api: UNIT_TEST_API_ARGS=""
 # unit-test-api: UNIT_TEST_API_ARGS="-s -vvv --log-cli-level DEBUG"
 
 .PHONY: unit-test-api-emulator
-unit-test-api-emulator: STORAGE_EMULATOR_HOST=$(STORAGE_EMULATOR_HOST_LOCAL)
+unit-test-api-emulator: STORAGE_EMULATOR_HOST=$(_STORAGE_EMULATOR_HOST)
 unit-test-api-emulator: NEXT_PUBLIC_STORAGE_BUCKET_NAME=$(BUCKET_EMULATOR)
 unit-test-api-emulator: RPATH_NOTEBOOKS=$(RPATH_NOTEBOOKS_TEST)
 unit-test-api-emulator: build-api-quiet
