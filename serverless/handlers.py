@@ -46,10 +46,10 @@ def handler_charts_refresh(request) -> Tuple[any, int]:
         case _: 
             return (
                 "Invalid value for querystring parameter 'data'. "
-                "The value must be one of the following."
-                "1. A single chart name."
-                "2. A csv string of multiple chart names"
-                "3. The symbol '*'"
+                "The value must be one of the following.\n"
+                "1. A single chart name.\n"
+                "2. A csv string of multiple chart names\n"
+                "3. The symbol '*'\n"
                 f"Valid individual names are {nbr.names}."
             ), 404 
 
@@ -71,7 +71,9 @@ def handler_charts_refresh(request) -> Tuple[any, int]:
             else: 
                 status = "use_cached"
                 run_time_seconds = None
-            statuses[schema_name] = {"status": status, "run_time_seconds": run_time_seconds}
+            statuses[schema_name] = {
+                "status": status, "run_time_seconds": run_time_seconds
+            }
         except BaseException as e:
             code = 500 
             err_msg = str(e) or "Internal Server Error"

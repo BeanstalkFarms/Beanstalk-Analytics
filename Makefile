@@ -7,7 +7,7 @@ export
 # -----------------------------------------------------------------------------------------------
 # Environment variables defined in this file are public (versioned on git)
 # Keep sensitive information in .env 
-# 
+
 # Conventions 
 # - Env vars beginning with PATH are paths relative to project directory. 
 # - Env vars beginning with RPATH are relative paths to some parent path (parent depends). 
