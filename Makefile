@@ -32,7 +32,9 @@ STORAGE_HOST=https://storage.googleapis.com
 # Local storage host (used for testing). Private and only set in env for certain commands 
 # Not a well documented feature within the API but here's the PR that added in the feature
 # https://github.com/googleapis/google-cloud-python/pull/9219
-_STORAGE_EMULATOR_HOST=http://localhost:9023
+STORAGE_EMULATOR_PORT=9023
+STORAGE_EMULATOR_HOST_NAME=localhost
+_STORAGE_EMULATOR_HOST=http://${STORAGE_EMULATOR_HOST_NAME}:${STORAGE_EMULATOR_PORT}
 
 # SERVERLESS API 
 # --------------

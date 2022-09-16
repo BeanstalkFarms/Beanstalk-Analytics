@@ -1,14 +1,14 @@
 import { ethers } from "ethers";
 import { NextPage } from "next"
 import { useEffect, useState } from "react";
-import Page from "../components/v1/layout/Page"
+import Page from "../../components/v1/layout/Page"
 import omit from 'lodash/omit'
-import Module from "../components/Module"
+import Module from "../../components/Module"
 import { Beanstalk__factory } from "../generated";
 import { TypedEvent } from '../generated/common';
-import contracts from "../lib/contracts"
-import { parseArgs } from "../lib/utils";
-import { chainId } from "../lib/provider";
+import contracts from "../../lib/contracts"
+import { parseArgs } from "../../lib/utils";
+import { chainId } from "../../lib/provider";
 
 const activateListeners = (
   handler: (event: TypedEvent<any>
