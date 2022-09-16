@@ -45,7 +45,7 @@ public/schemas
 .cloudstorage
 
 # Custom 
-**/tbiq-beanstalk-analytics-bca7893d8291.json
+**/*-bca*.json 
 **/__pycache__/
 .build/serverless/
 .pytest_cache/

@@ -105,6 +105,8 @@ define run_build_api
 		scripts/shell/build-api.sh; 
 endef 
 
+build-ap%: RPATH_NOTEBOOKS=$(RPATH_NOTEBOOKS_PROD)
+
 # Builds serverless code bundle with verbose output 
 .PHONY: build-api 
 build-api: BUILD_API_VERBOSE=true
@@ -177,15 +179,17 @@ debug-api-dev-bucket-gcp: build-api-quiet
 # RULES - BACKEND - Local Api Unit Testing 
 # -----------------------------------------------------------------------------------------------
 
-# Uncomment one of the target specific definitions for UNIT_TEST_API_ARGS for different levels of info 
-unit-test-api: UNIT_TEST_API_ARGS=""
+# Uncomment one of the target specific definitions for UNIT_TEST_API_ARGS 
+# to pass different sets of arguments to the pytest commands. 
+unit-test-api: UNIT_TEST_API_ARGS="-v"
+# unit-test-api: UNIT_TEST_API_ARGS="-x"
 # unit-test-api: UNIT_TEST_API_ARGS="-s -vvv"
 # unit-test-api: UNIT_TEST_API_ARGS="-s -vvv --log-cli-level DEBUG"
 
 .PHONY: unit-test-api-emulator
 unit-test-api-emulator: STORAGE_EMULATOR_HOST=$(_STORAGE_EMULATOR_HOST)
 unit-test-api-emulator: NEXT_PUBLIC_STORAGE_BUCKET_NAME=$(BUCKET_EMULATOR)
-unit-test-api-emulator: RPATH_NOTEBOOKS=$(RPATH_NOTEBOOKS_TEST)
+unit-test-api-emulator: RPATH_NOTEBOOKS=$(PATH_SERVERLESS_CODE_DEPLOY)/$(RPATH_NOTEBOOKS_TEST)
 unit-test-api-emulator: build-api-quiet
 	@if [ -d ".cloudstorage " ]; then rmdir ".cloudstorage"; fi
 	eval "pytest ./serverless-tests/test_api_emulator.py ${UNIT_TEST_API_ARGS}"
@@ -193,6 +197,7 @@ unit-test-api-emulator: build-api-quiet
 
 .PHONY: unit-test-api-gcp
 unit-test-api-gcp: NEXT_PUBLIC_STORAGE_BUCKET_NAME=$(BUCKET_TEST)
+unit-test-api-gcp: RPATH_NOTEBOOKS=$(PATH_SERVERLESS_CODE_DEPLOY)/$(RPATH_NOTEBOOKS_PROD)
 unit-test-api-gcp: build-api-quiet
 	eval "pytest ./serverless-tests/test_api_gcp.py ${UNIT_TEST_API_ARGS}"
 

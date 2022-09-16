@@ -21,7 +21,8 @@ def handle_cors_preflight():
         'Access-Control-Allow-Headers': 'Content-Type, Authorization',
         'Access-Control-Max-Age': '3600'
     }
-    return ('', 204, headers)
+    # changed from 204 to 200 for unit tests 
+    return ('', 200, headers)
 
 
 @functions_framework.http

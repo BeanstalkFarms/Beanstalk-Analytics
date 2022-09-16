@@ -17,19 +17,13 @@ from utils import (
 logging.basicConfig(level=logging.DEBUG)
 
 
-PATH_SERVERLESS_CODE_DEPLOY = Path(os.environ['PATH_SERVERLESS_CODE_DEPLOY'])
 RPATH_NOTEBOOKS = Path(os.environ['RPATH_NOTEBOOKS'])
 
 
-@mock.patch.dict(os.environ, {
-    "RPATH_NOTEBOOKS": str(PATH_SERVERLESS_CODE_DEPLOY / RPATH_NOTEBOOKS), 
-})
 class TestApiGCP: 
 
     schema_names = list(
-        p.stem.lower() for p in 
-        (Path(PATH_SERVERLESS_CODE_DEPLOY) / Path(RPATH_NOTEBOOKS)).iterdir()
-        if p.suffix == '.ipynb'
+        p.stem.lower() for p in RPATH_NOTEBOOKS.iterdir() if p.suffix == '.ipynb'
     )
     # Rather than hardcoding in values (which is annoying bc notebook names)
     # change as we add / delete / modify / etc., We simply check that we are 

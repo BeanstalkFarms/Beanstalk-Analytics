@@ -5,6 +5,27 @@ process are contained within a `Makefile`. This allows us to run many different 
 of commands within different environments using simple commands, facilitating a smooth 
 developer experience. 
 
+## Environment File 
+
+Most environment variables are public and currently exist in the `Makefile`, which 
+is versioned on github. 
+
+You should also create a file called `.env` in the root directory of this project. 
+This file name is already included in `.gitignore` so this file won't be versioned. 
+
+Within this file, define the following key value pairs. 
+
+- `PATH_PROJECT`: The absolute file path to the project root directory. 
+  - This is defined as a safety measure, as some of the build processes use file 
+  system commands (`shutil.rmtree`) that could potentially be dangerous if run 
+  incorrectly. I've implemented a "safe" wrapper around this method in `scripts/python/safe_rmtree.py` 
+  that ensures that this environment variable is set prior to performing any operations. 
+- `GOOGLE_APPLICATION_CREDENTIALS`: The name of the service account credentials file. This 
+  File should exist both in the root directory, and also in `serverless`, but the value of 
+  this variable should point to the one in the root directory (i.e. it is just the filename). 
+  The pattern `**/*-bca*.json` in `.gitignore` should prevent any service account key file 
+  created by developers from being versioned, but take extra precautions here. 
+
 ## Frontend Overview 
 
 The frontend leverages the [Next.js](https://nextjs.org/) React development framework.

@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 from google.cloud.storage._helpers import _get_storage_host
 logger.info(f"Storage host: {_get_storage_host()}")
 
+
 BUCKET_NAME = os.environ["NEXT_PUBLIC_STORAGE_BUCKET_NAME"]
 RPATH_NOTEBOOKS = os.environ["RPATH_NOTEBOOKS"]
 CREDENTIALS, PROJECT_ID = google.auth.load_credentials_from_file(os.environ['GOOGLE_APPLICATION_CREDENTIALS'])
@@ -130,4 +131,5 @@ class NotebookRunner:
                 ]
             }:
                 return nb_output_json 
+                
         raise ValueError("Notebook executed but output form was incorrect.")

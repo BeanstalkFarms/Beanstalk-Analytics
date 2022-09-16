@@ -56,7 +56,9 @@ to manage objects in the bucket.
 1. Go to `IAM & Admin` and then `Service Accounts`. 
    1. Create a new service account. 
    2. Generate and download a key for this service account (a JSON file).
-   3. Move this file into the `serverless` directory.
+   3. Move this file to two locations in the project (will streamline later)
+      1. Root directory 
+      2. `serverless` directory. 
 2. Go to the bucket's permission settings and add a new IAM permission.
    1. Principal: `SERVICE_ACCOUNT_ID` (the id of the service account created in step 1). 
    2. Role: `Storage Object Admin`. 

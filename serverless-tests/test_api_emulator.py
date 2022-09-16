@@ -17,10 +17,6 @@ from utils import (
 logging.basicConfig(level=logging.DEBUG)
 
 
-PATH_SERVERLESS_CODE_DEPLOY = Path(os.environ['PATH_SERVERLESS_CODE_DEPLOY'])
-RPATH_NOTEBOOKS = Path(os.environ['RPATH_NOTEBOOKS'])
-
-
 @pytest.fixture
 def notebook_data(): 
     # Data objects expected to exist in the returned schemas 
@@ -32,9 +28,6 @@ def notebook_data():
     return notebook_data
 
 
-@mock.patch.dict(os.environ, {
-    "RPATH_NOTEBOOKS": str(PATH_SERVERLESS_CODE_DEPLOY / RPATH_NOTEBOOKS), 
-})
 class TestApiLocal: 
 
     def setup_method(self, method):
