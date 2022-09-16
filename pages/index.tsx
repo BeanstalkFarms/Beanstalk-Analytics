@@ -42,6 +42,7 @@ const getChartStatusFromAge = (iso_timestamp: string) => {
 }
 
 const Chart : React.FC<{ name: string; height?: number; }> = ({ name, height = 300 }) => {
+  const [doUpdate, setDoUpdate] = useState<boolean>(true); 
   const [chartState, setChartState] = useState<ChartState>({
     "schema": null, 
     "chartLoaded": "loading", 
@@ -51,45 +52,51 @@ const Chart : React.FC<{ name: string; height?: number; }> = ({ name, height = 3
   }); 
 
   useEffect(() => {
-    (async () => {
-      // Including the Authorization header forces the requests to do CORS preflight 
-      const headers = {"Authorization": "Bearer dummy_force_cors_preflight"}
-      const newChartState: ChartState = {
-        "schema": null, 
-        "chartLoaded": "loading", 
-        "apiStatus": null, 
-        "chartStatus": null, 
-        "queryRuntimeSeconds": null
-      }; 
-      try {
-        const res = await fetch(urlApiName(name).toString(), {"headers": headers })
-          .then(r => r.json());
-        const { status } = res[name.toLowerCase()]; 
-        if (status !== 'recomputed' && status !== 'use_cached') {
-          throw new Error(`Unrecognized status returned from cloud function: ${status}`)
+    if (doUpdate) {
+      (async () => {
+        // Including the Authorization header forces the requests to do CORS preflight 
+        const headers = {"Authorization": "Bearer dummy_force_cors_preflight"}
+        const newChartState: ChartState = {
+          "schema": null, 
+          "chartLoaded": "loading", 
+          "apiStatus": null, 
+          "chartStatus": null, 
+          "queryRuntimeSeconds": null
+        }; 
+        try {
+          const res = await fetch(urlApiName(name).toString(), {"headers": headers })
+            .then(r => r.json());
+          const { status } = res[name.toLowerCase()]; 
+          if (status !== 'recomputed' && status !== 'use_cached') {
+            throw new Error(`Unrecognized status returned from cloud function: ${status}`)
+          }
+          newChartState.apiStatus = "healthy"; 
+        } catch (e) {
+          console.error(e);
+          newChartState.apiStatus = "unhealthy"; 
         }
-        newChartState.apiStatus = "healthy"; 
-      } catch (e) {
-        console.error(e);
-        newChartState.apiStatus = "unhealthy"; 
-      }
-      try {
-        const { schema, timestamp, run_time_seconds } = await fetch(urlBucketName(name).toString(), {"headers": headers })
-          .then(r => r.json()); 
-        newChartState.chartLoaded = "loaded";  
-        newChartState.schema = schema; 
-        newChartState.queryRuntimeSeconds = parseFloat(run_time_seconds); 
-        newChartState.chartStatus = getChartStatusFromAge(timestamp);
-      } catch (e) {
-        console.error(e);
-        newChartState.chartLoaded = "failed";  
-        newChartState.schema = null; 
-        newChartState.queryRuntimeSeconds = null; 
-        newChartState.chartStatus = null; 
-      }
-      setChartState(newChartState);
-    })()
-  }, [])
+        try {
+          const { schema, timestamp, run_time_seconds } = await fetch(urlBucketName(name).toString(), {"headers": headers })
+            .then(r => r.json()); 
+          newChartState.chartLoaded = "loaded";  
+          newChartState.schema = schema; 
+          newChartState.queryRuntimeSeconds = parseFloat(run_time_seconds); 
+          newChartState.chartStatus = getChartStatusFromAge(timestamp);
+        } catch (e) {
+          console.error(e);
+          newChartState.chartLoaded = "failed";  
+          newChartState.schema = null; 
+          newChartState.queryRuntimeSeconds = null; 
+          newChartState.chartStatus = null; 
+        }
+        // TODO: @Silo Chad, is there a better way to do this? 
+        // I added doUpdate bc before that, this effect was run all mounts and unmounts 
+        // even though it is only necessary to run this on mount. 
+        setChartState(newChartState);
+        setDoUpdate(!doUpdate); 
+      })()
+    }
+  }, [doUpdate]);
 
   const statusColor = (
       chartState.chartStatus === "updated" ? "green" : 
