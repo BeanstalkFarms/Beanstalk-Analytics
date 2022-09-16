@@ -34,5 +34,5 @@ These links are for developers working on the full-stack application.
 Right now, this really just for **TBIQ**. 
 
 - [Google Cloud Platform Infrastructure Setup](./docs/setup-cloud-infra.md)
-- [Application Development](./docs/dev.md)
+- [Application Development](./docs/development.md)
 - [Application Deployment](./docs/deploy.md) 

@@ -181,8 +181,8 @@ debug-api-dev-bucket-gcp: build-api-quiet
 
 # Uncomment one of the target specific definitions for UNIT_TEST_API_ARGS 
 # to pass different sets of arguments to the pytest commands. 
-unit-test-api: UNIT_TEST_API_ARGS="-v"
-# unit-test-api: UNIT_TEST_API_ARGS="-x"
+unit-test-api: UNIT_TEST_API_ARGS="-v" # Recommended pre-deployment, as this shows names of passing tests 
+# unit-test-api: UNIT_TEST_API_ARGS="-v -x" # Exits on first failure
 # unit-test-api: UNIT_TEST_API_ARGS="-s -vvv"
 # unit-test-api: UNIT_TEST_API_ARGS="-s -vvv --log-cli-level DEBUG"
 
