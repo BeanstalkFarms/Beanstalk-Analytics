@@ -65,18 +65,18 @@ def handler_charts_refresh(request) -> Tuple[any, int]:
             if compute_schema:
                 status = "recomputed"
                 schema = nbr.execute(schema_name)
-                run_time_seconds = nbr.execute._decorated_run_time_seconds
-                data = {"timestamp": cur_dtime.isoformat(), "schema": schema}
+                data = {
+                    "timestamp": cur_dtime.isoformat(), 
+                    "run_time_seconds": nbr.execute._decorated_run_time_seconds,
+                    "schema": schema,
+                }
                 sc.upload(blob, json.dumps(data))
             else: 
                 status = "use_cached"
-                run_time_seconds = None
-            statuses[schema_name] = {
-                "status": status, "run_time_seconds": run_time_seconds
-            }
+            statuses[schema_name] = {"status": status}
         except BaseException as e:
             code = 500 
             err_msg = str(e) or "Internal Server Error"
-            statuses[schema_name] = {"status": err_msg, "run_time": None}
+            statuses[schema_name] = {"status": "failure", "error": err_msg}
             logger.error(err_msg)
     return statuses, code

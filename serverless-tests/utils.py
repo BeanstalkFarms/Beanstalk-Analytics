@@ -55,11 +55,7 @@ def call_api_validate(
     assert resp.status_code == 200
     assert set(expected_schema_names) == set(data.keys())
     for schema_data in data.values(): 
-        assert set(['run_time_seconds', "status"]) == set(schema_data.keys())
-        if expected_status == "recomputed": 
-            assert isinstance(schema_data['run_time_seconds'], float) 
-        else: 
-            assert schema_data['run_time_seconds'] is None 
+        assert len(schema_data.keys()) == 1
         assert schema_data['status'] == expected_status
     return data 
 
@@ -79,9 +75,12 @@ def call_storage_validate(schema_name) -> Tuple[datetime.datetime, dict]:
     assert resp.status_code == 200
     data = resp.json() 
     match data: 
-        case {"timestamp": str(tstamp), "schema": schema}: 
+        case {
+            "timestamp": str(tstamp), "schema": schema, "run_time_seconds": float(run_secs)
+        }: 
             tstamp = datetime.datetime.fromisoformat(tstamp)
             assert isinstance(tstamp, datetime.datetime)
+            assert run_secs
             alt.Chart.from_json(json.dumps(schema))
         case _: 
             assert False, "Object returned from storage has incorrect structure"
