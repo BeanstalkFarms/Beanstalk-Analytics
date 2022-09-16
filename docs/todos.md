@@ -14,10 +14,13 @@ Any priority 3 or greater should be completed before v1 launch.
   - status (refreshed, cached). 
   - run time (amount of time notebook that created schema took to run). 
   - timestamp (when the schema was created)
+- **(3)** Support for toggling between different subgraphs. Similar to how we do things in the frontend.
 
 ## Serverless API 
 
-Good to go for now. 
+- **(3)** Fork the gcp storage emulator package, and make the changes necessary to use bypass 
+  CORS issues. The work is already done here just need to setup the fork and ensure that the 
+  version in requirements-dev.txt matches the fork. 
 
 ## Charts 
 

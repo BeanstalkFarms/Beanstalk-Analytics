@@ -21,17 +21,15 @@ const Chart : React.FC<{ name: string; height?: number; }> = ({ name, height = 3
       const reqUrlBucket = new URL(`${urlBucket}/schemas/${name.toLowerCase()}.json?${Date.now()}`);
       try {
         // Including the Authorization header forces the requests to do CORS preflight 
-        const headers = {"Authorization": "Bearer dummy_token_force_cors_preflight"}
-        const apiResp = await fetch(reqUrlApi.toString(), {"headers": headers })
-          .then(r => r.json()); 
+        const headers = {"Authorization": "Bearer dummy_force_cors_preflight"}
+        const apiResp = await fetch(reqUrlApi.toString(), {"headers": headers }).then(r => r.json()); 
         // TODO: Given status, run_timeseconds, and timestamp, create some kind of UI indicator 
         //       that makes ths information accessible to the end user (tooltip?, header?).
         // status: Either 'recomputed' or 'use_cached' 
         // run_time_seconds: The number of seconds it took to generate the chart on the server 
         const { status, run_time_seconds } = apiResp; 
         // timestamp: The timestamp at which the schema was created 
-        const { schema, timestamp } = await fetch(reqUrlBucket.toString(), {"headers": headers })
-          .then(r => r.json()); 
+        const { schema, timestamp } = await fetch(reqUrlBucket.toString(), {"headers": headers }).then(r => r.json()); 
         setSpec(schema); 
         setStatus('ready');
       } catch(e) {
