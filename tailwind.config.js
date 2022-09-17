@@ -7,7 +7,6 @@ module.exports = {
     "./components/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
-    extend: {},
     colors: {
       transparent: 'transparent',
       current: 'currentColor',

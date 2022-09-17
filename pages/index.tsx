@@ -1,8 +1,10 @@
 import { NextPage } from "next";
-import { useEffect, useState } from "react";
+import { PropsWithChildren, useEffect, useState } from "react";
 import { VegaLite } from 'react-vega';
+import { Popover } from '@headlessui/react'
 import Module from "../components/Module";
 import Page from "../components/Page";
+import { AppProps } from "next/app";
 
 if (!process.env.NEXT_PUBLIC_STORAGE_BUCKET_NAME) throw new Error('Environment: Missing bucket');
 if (!process.env.NEXT_PUBLIC_CDN) throw new Error('Environment: Missing storage url'); 
@@ -39,6 +41,22 @@ const computeAgeMinutes = (iso_timestamp: string) => {
 const getChartStatusFromAge = (iso_timestamp: string) => {
   const age_minutes = computeAgeMinutes(iso_timestamp); 
   return age_minutes < 15 ? "updated" : "refreshable"
+}
+
+function ChartInfoPopover(props: PropsWithChildren) {
+  return (
+    <Popover className="relative">
+      <Popover.Button>{props.children}</Popover.Button>
+      <Popover.Panel className="absolute z-10">
+        <div className="grid grid-cols-2">
+          <a href="/analytics">Analytics</a>
+          <a href="/engagement">Engagement</a>
+          <a href="/security">Security</a>
+          <a href="/integrations">Integrations</a>
+        </div>
+      </Popover.Panel>
+    </Popover>
+  )
 }
 
 const Chart : React.FC<{ name: string; height?: number; }> = ({ name, height = 300 }) => {
@@ -98,12 +116,6 @@ const Chart : React.FC<{ name: string; height?: number; }> = ({ name, height = 3
     }
   }, [doUpdate]);
 
-  const statusColor = (
-      chartState.chartStatus === "updated" ? "green" : 
-      chartState.chartStatus === "refreshable" ? "yellow" : 
-      "red"
-  );
-
   // Chart body content 
   const chartContent = (
     chartState.chartLoaded === "loading" ? (
@@ -116,12 +128,19 @@ const Chart : React.FC<{ name: string; height?: number; }> = ({ name, height = 3
         <div className="grid gap-4 grid-cols-2 grid-rows-1">
           <div className="p-2"><h4 className="font-bold">{name}</h4></div>
           <div className="flex justify-end p-2">
-            <h6 className="font-bold inline">status:</h6>
-            <p className="inline ml-1 mr-2">{chartState.chartStatus}</p>
-            <div className="inline flex items-center">
-              <div className={`rounded-full bg-${statusColor}-500 w-3.5 h-3.5`}></div>
-            </div>
+            <ChartInfoPopover>
+              <h6 className="font-bold inline">status:</h6>
+              <p className="inline ml-1 mr-2">{chartState.chartStatus}</p>
+              <div className="inline-flex items-center">
+                <div className={`rounded-full w-3.5 h-3.5
+                ${chartState.chartStatus === "updated" ? "bg-green-500" : 
+                  chartState.chartStatus === "refreshable" ? "bg-yellow-500" : 
+                  chartState.chartStatus === "failed" ? "bg-red-500" : ''}`
+                }></div>
+              </div>
+            </ChartInfoPopover>
           </div>
+          <ChartInfoPopover/>
         </div>
         <div className="flex items-center justify-center">
           <VegaLite spec={chartState.schema as Object} height={height} />
