@@ -1,6 +1,6 @@
 import { NextPage } from "next";
 import React from 'react';
-import { PropsWithChildren, useEffect, useReducer, useState } from "react";
+import { PropsWithChildren, useEffect, useReducer, useState, useRef } from "react";
 import { VegaLite } from 'react-vega';
 import { Popover } from '@headlessui/react'
 import Module from "../components/Module";
@@ -113,7 +113,7 @@ const ChartInfoPopover: React.FC<ChartInfoPopoverProps> = ({
   if (isNumber(age_minutes)) {
     const ageMins = Math.floor(age_minutes); 
     const ageSecs = Math.round((age_minutes - ageMins) * 60);  
-    strLastRefreshed = ageMins === 0 ? `${ageSecs} seconds` : `${ageMins} minutes ${ageSecs} seconds`;
+    strLastRefreshed = ageMins === 0 ? `${ageSecs} seconds` : `${ageMins} min ${ageSecs} secs`;
   } else {
     strLastRefreshed = empty; 
   }
@@ -131,38 +131,61 @@ const ChartInfoPopover: React.FC<ChartInfoPopoverProps> = ({
     focus-visible:ring-blue-500 
     focus-visible:ring-offset-2` 
     : 
-    `bg-gray-100 text-gray-900 
+    `bg-gray-300 text-gray-900 
     disabled`;
 
+  const fieldClassName = "col-span-2 font-medium text-slate-900"; 
+  const valueClassName = "text-slate-700"; 
+  // TODO: The popover button focus state is behaving really strangely. 
+  //        Not super high priorty but would be nice to fix. @SiloChad any recs here? 
   return (
     <Popover className="relative">
-      <Popover.Button>{children}</Popover.Button>
-      {/* Vega lite action button has zIndex of 1000 so this ensures that popup overlays it */}
-      <Popover.Panel className="absolute right-0 top-7 z-10 w-96" style={{"zIndex": 1001}}>
-        <div className="block border border-solid border-sky-500 rounded-md p-3 bg-slate-50">
-          {/* Chart metadata */}
-          <div className="grid gap-2 grid-cols-2 grid-rows-4">
-              <p>refresh endpoint health:</p><p>{strRefreshEndpointHealth}</p>
-              <p>storage endpoint health:</p><p>{strStorageEndpointHealth}</p>
-              <p>query runtime:</p><p>{strQueryRuntime}</p>
-              <p>chart age:</p><p>{strLastRefreshed}</p>
-          </div>
-          {/* Refresh button */}
-          <div className="flex items-center justify-center">
-            <button
-              type="button"
-              className={`
-              inline-flex justify-center 
-              rounded-md border border-transparent px-4 py-2 text-sm font-medium
-              ${buttonExtraClasses}`}
-              onClick={refreshChart}
-            >
-              {buttonText}
-            </button>
-          </div>
-        
-      </div>
-      </Popover.Panel>
+      {({ open }) => (
+        <>
+          {/* ui-not-open:!outline-0 ui-open:!border-slate-200 */}
+          <Popover.Button className={`mt-1 mr-2`}>
+            {children}
+          </Popover.Button>
+          {/* Vega lite action button has zIndex of 1000 so this ensures that popup overlays it */}
+          <Popover.Panel 
+          className="absolute right-2 top-12 z-10 w-96" 
+          style={{"zIndex": 1001}}>
+          {({ close }) => (
+            <div className="block border border-solid border-sky-500 rounded-md p-3 bg-slate-50">
+              {/* Chart metadata */}
+              <div className="grid gap-2 grid-cols-3 grid-rows-4">
+                  <p className={fieldClassName}>refresh endpoint health:</p>
+                  <p className={valueClassName}>{strRefreshEndpointHealth}</p>
+                  <p className={fieldClassName}>storage endpoint health:</p>
+                  <p className={valueClassName}>{strStorageEndpointHealth}</p>
+                  <p className={fieldClassName}>query runtime:</p>
+                  <p className={valueClassName}>{strQueryRuntime}</p>
+                  <p className={fieldClassName}>chart age:</p>
+                  <p className={valueClassName}>{strLastRefreshed}</p>
+              </div>
+              {/* Refresh button */}
+              <div className="flex items-center justify-center">
+                <button
+                  type="button"
+                  className={`
+                  inline-flex justify-center 
+                  rounded-md border border-transparent px-4 py-2 text-sm font-medium
+                  ${buttonExtraClasses}`}
+                  onClick={() => {
+                    if (user_can_refresh) {
+                      close(); 
+                      refreshChart();
+                    }
+                  }}
+                >
+                  {buttonText}
+                </button>
+              </div>
+            </div> 
+          )}       
+          </Popover.Panel>
+        </>
+      )}
     </Popover>
   )
 }
@@ -303,7 +326,7 @@ const Chart : React.FC<{ name: string; height?: number; }> = ({ name, height = 3
   } else {
     chartBody = !schema ? null : (
       <div className="flex items-center justify-center">
-        <VegaLite spec={schema.schema as Object} height={height} />
+        <VegaLite spec={schema.schema as Object} height={height}/>
       </div>
     ); 
   }
@@ -345,9 +368,9 @@ const Chart : React.FC<{ name: string; height?: number; }> = ({ name, height = 3
     {/* Chart Header */}
     <div className="grid gap-4 grid-cols-2 grid-rows-1">
       <div className="p-2"><h4 className="font-bold">{name}</h4></div>
-      <div className="flex justify-end p-2">
+      <div className="flex justify-end">
         <ChartInfoPopover {...state} refreshChart={handleRefreshChart}>
-          <div className="flex justify-center">
+          <div className="flex justify-center pl-2 pr-2 pt-1 pb-1">
             <h6 className="font-bold inline">status:</h6>
             <p className="inline ml-1 mr-2">{statusString}</p>
             <div className="inline-flex items-center">

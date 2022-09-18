@@ -6,7 +6,7 @@ const Header : React.FC<{
   children
 }) => {
   return (
-    <div className="grid grid-flow-col px-4 py-4 border-b border-gray-200">
+    <div className="grid grid-flow-col px-4 py-4 border-b border-slate-500 bg-[#daebf7]">
       <div className="col-span-2 flex items-center justify-start">
         Links
       </div>

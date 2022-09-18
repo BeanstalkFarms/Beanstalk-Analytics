@@ -6,7 +6,7 @@ const Module : React.FC<{
   children
 }) => {
   return (
-    <div className="border-gray-200 border">
+    <div className="border-slate-400 border">
       {children}
     </div>
   )
