@@ -1,6 +1,6 @@
 import { NextPage } from "next";
 import React from 'react';
-import { PropsWithChildren, useEffect, useState } from "react";
+import { PropsWithChildren, useEffect, useReducer, useState } from "react";
 import { VegaLite } from 'react-vega';
 import { Popover } from '@headlessui/react'
 import Module from "../components/Module";
@@ -39,14 +39,14 @@ type Schema = {
   query_runtime_secs: number | null
 }
 
-
 // Represents the most recent status of an api call 
 // "pending" if there is an ongoing request 
 // "success" if the most recent request succeeded. 
 // "failure" if the most recent request failed. 
 // null if we have not yet made a request 
-type EndpointStatus = "pending" | "success" | "failure" | null 
+type EndpointStatus = "pending" | "success" | "failure" | null; 
 
+type ChartStatus = "pre-loading" | "loading" | "stable"; 
 
 type ChartState = {
   // The schema object backing the chart. 
@@ -56,12 +56,14 @@ type ChartState = {
     - "loading": We are in the process of refresing and retrieving a new copy of schema. 
     - "stable": We are not actively preparing to make api calls or making api calls. 
   */
-  status_chart: "pre-loading" | "loading" | "stable"
+  status_chart: ChartStatus
   // Status for most recent attempt to refresh schema.
   status_refresh_endpoint: EndpointStatus
   // Status for most recent attempt to load schema.
   status_storage_endpoint: EndpointStatus
   // Flag indicator for whether or not user can attempt to refresh schema. 
+  // True when (chart stable && ((schema exists and is refreshable) || schema does not exist))
+  // Always false when status_chart !== "stable"
   user_can_refresh: boolean 
 }; 
 
@@ -79,35 +81,34 @@ const computeAgeMinutes = (iso_timestamp: string) => {
   return age_minutes; 
 }
 
-const canUserRefresh = (age_minutes: number) : boolean => {
+const isSchemaPastAgeThreshold = (age_minutes: number) : boolean => {
   return age_minutes < 45
 }
 
 const ChartInfoPopover: React.FC<ChartInfoPopoverProps> = ({
-  children, status_storage_endpoint, user_can_refresh, query_runtime_secs, age_minutes, status_refresh_endpoint, refreshChart
+  children, schema, status_storage_endpoint, user_can_refresh, status_refresh_endpoint, refreshChart
 }) => {
   // props.children are the elements we want to serve as the "button" that opens the model. 
   // This group of elements will have a click listener attached by this component. 
-  const isButtonActive = () => (
-    status_storage_endpoint === 'failed' || (status_storage_endpoint === 'loaded' && user_can_refresh === 'refreshable')
-  )
-  const buttonActive = isButtonActive(); 
+  const { age_minutes, query_runtime_secs } = schema || {}; 
 
   // Compute text values for populating tooltip body 
-  const strQueryRuntime = isNumber(query_runtime_secs) ? `${Math.round(query_runtime_secs).toString()} seconds` : 'n/a'; 
-  const strEndpointHealth = status_refresh_endpoint; 
-  let strLastRefreshed = null; 
+  const empty = "n/a"; 
+  const strQueryRuntime: string = isNumber(query_runtime_secs) ? `${Math.round(query_runtime_secs).toString()} seconds` : empty; 
+  const strRefreshEndpointHealth: string = status_refresh_endpoint || empty; 
+  const strStorageEndpointHealth: string = status_storage_endpoint || empty; 
+  let strLastRefreshed: string; 
   if (isNumber(age_minutes)) {
     const ageMins = Math.floor(age_minutes); 
     const ageSecs = Math.round((age_minutes - ageMins) * 60);  
     strLastRefreshed = ageMins === 0 ? `${ageSecs} seconds ago` : `${ageMins} minutes ${ageSecs} seconds ago`;
   } else {
-    strLastRefreshed = 'n/a'; 
+    strLastRefreshed = empty; 
   }
 
   // Compute button visual state 
-  const buttonText = status_storage_endpoint === "failed" || status_storage_endpoint === "loading" ? "Retry" : "Refresh"; 
-  const buttonExtraClasses = buttonActive ? 
+  const buttonText: string = status_storage_endpoint === "success" ? "Refresh" : "Retry"; 
+  const buttonExtraClasses: string = user_can_refresh ? 
     `bg-blue-100 text-blue-900 
     hover:bg-blue-200 
     focus:outline-none 
@@ -125,8 +126,9 @@ const ChartInfoPopover: React.FC<ChartInfoPopoverProps> = ({
       <Popover.Panel className="absolute right-0 top-7 z-10 w-72" style={{"zIndex": 1001}}>
         <div className="block border border-solid border-sky-500 rounded-md p-3 bg-slate-50">
           {/* Chart metadata */}
-          <div className="grid gap-2 grid-cols-2 grid-rows-3">
-              <p>endpoint health:</p><p>{strEndpointHealth}</p>
+          <div className="grid gap-2 grid-cols-2 grid-rows-4">
+              <p>refresh endpoint health:</p><p>{strRefreshEndpointHealth}</p>
+              <p>storage endpoint health:</p><p>{strStorageEndpointHealth}</p>
               <p>query runtime:</p><p>{strQueryRuntime}</p>
               <p>last refreshed:</p><p>{strLastRefreshed}</p>
           </div>
@@ -138,7 +140,7 @@ const ChartInfoPopover: React.FC<ChartInfoPopoverProps> = ({
               inline-flex justify-center 
               rounded-md border border-transparent px-4 py-2 text-sm font-medium
               ${buttonExtraClasses}`}
-              onClick={() => isButtonActive() && refreshChart()}
+              onClick={refreshChart}
             >
               {buttonText}
             </button>
@@ -150,9 +152,9 @@ const ChartInfoPopover: React.FC<ChartInfoPopoverProps> = ({
   )
 }
 
-const Chart : React.FC<{ name: string; height?: number; }> = ({ name, height = 300 }) => {
 
-  const [chartState, setChartState] = useState<ChartState>({
+function getInitialState(name: string): ChartState {
+  return {
     schema: {
       name: name, 
       schema: null,
@@ -163,22 +165,63 @@ const Chart : React.FC<{ name: string; height?: number; }> = ({ name, height = 3
     status_chart: "pre-loading", 
     status_refresh_endpoint: null, 
     status_storage_endpoint: null, 
-    user_can_refresh: false, // user can't refresh because we always refresh during initialization 
-  }); 
+    user_can_refresh: false, 
+  } as ChartState; 
+}
 
-  useEffect(() => {
-    if (chartState.status_chart === 'pre-loading') {
-      setChartState({
-        ...chartState, 
+type Action =
+ | { type: "start-loading" }
+ | { type: "toggle-user-can-refresh" }
+ | { type: "update-schema-age" }
+ | { type: 'load-schema', chart_state: ChartState };
+
+function reducer(state: ChartState, action: Action): ChartState {
+  switch (action.type) {
+    case "start-loading":
+      return {
+        schema: state.schema,
         status_chart: "loading", 
         status_refresh_endpoint: "pending", 
         status_storage_endpoint: "pending", 
-      }); 
-    } else if (chartState.status_storage_endpoint === 'loading') {
+        user_can_refresh: false, 
+      };
+    case "update-schema-age": 
+      if (!state.schema || !state.schema.timestamp) {
+        throw new Error("Schema and schema timestamp must exist for action update-schema-age");
+      }
+      return {
+        ...state, schema: {...state.schema, age_minutes: computeAgeMinutes(state.schema.timestamp)}
+      };
+    case "toggle-user-can-refresh": 
+      return {...state, user_can_refresh: !state.user_can_refresh}; 
+    case 'load-schema':
+      return action.chart_state; 
+    default:
+      throw new Error();
+  }
+}
+
+const Chart : React.FC<{ name: string; height?: number; }> = ({ name, height = 300 }) => {
+
+  const [state, dispatch] = useReducer(reducer, getInitialState(name)); 
+  const {
+    schema, 
+    status_chart,
+    status_storage_endpoint,
+    user_can_refresh,
+  } = state; 
+
+  useEffect(() => {
+    if (status_chart === 'pre-loading') {
+      dispatch({type: "start-loading"});
+    } else if (status_chart === 'loading') {
       (async () => {
         // Including the Authorization header forces the requests to do CORS preflight 
         const headers = {"Authorization": "Bearer dummy_force_cors_preflight"}
-        let newChartState: ChartState = {...chartState}; 
+        let new_schema: Schema | null; 
+        let new_status_refresh_endpoint: EndpointStatus;
+        let new_status_storage_endpoint: EndpointStatus; 
+        // 1. Make a call to the refresh endpoint 
         try {
           const res = await fetch(urlApiName(name).toString(), {"headers": headers })
             .then(r => r.json());
@@ -186,136 +229,134 @@ const Chart : React.FC<{ name: string; height?: number; }> = ({ name, height = 3
           if (status !== 'recomputed' && status !== 'use_cached') {
             throw new Error(`Unrecognized status returned from cloud function: ${status}`)
           }
-          newChartState.status_refresh_endpoint = "healthy"; 
+          new_status_refresh_endpoint = "success"; 
         } catch (e) {
           console.error(e);
-          newChartState.status_refresh_endpoint = "unhealthy"; 
+          new_status_refresh_endpoint = "failure"; 
         }
+        // 2. Make a call to the storage endpoint 
         try {
-          const { schema, timestamp, run_time_seconds } = await fetch(urlBucketName(name).toString(), {"headers": headers })
+          const res = await fetch(urlBucketName(name).toString(), {"headers": headers })
             .then(r => r.json()); 
-          const age_minutes = computeAgeMinutes(timestamp); 
-          newChartState = {
-            ...newChartState, 
-            schema: {
-              name, 
-              schema, 
-              timestamp, 
-              query_runtime_secs: parseFloat(run_time_seconds),
-              age_minutes
-            }, 
-            status_storage_endpoint: "loaded",
-            user_can_refresh: canUserRefresh(age_minutes), 
-          };
+          new_status_storage_endpoint = "success"; 
+          const age_minutes = computeAgeMinutes(res.timestamp); 
+          new_schema = {
+            name, 
+            schema: res.schema, 
+            timestamp: res.timestamp, 
+            query_runtime_secs: parseFloat(res.run_time_seconds),
+            age_minutes
+          }
         } catch (e) {
           console.error(e);
-          newChartState.status_storage_endpoint = "failed";
-          if (newChartState.schema && newChartState.schema.timestamp) {
-            // If we failed to load a new schema, and an old schema exists, we update its age. 
-            const age_minutes = computeAgeMinutes(newChartState.schema.timestamp)
-            newChartState = {
-              ...newChartState, 
-              schema: {...newChartState.schema, age_minutes}, 
-              user_can_refresh: canUserRefresh(age_minutes),
-            };
-          } else {
-            // If we failed to load a new schema, and no schema exists, user can refresh. 
-            newChartState.user_can_refresh = true;
-          }
+          new_status_storage_endpoint = "failure"; 
+          new_schema = (schema && schema.timestamp) ? 
+            {...schema, age_minutes: computeAgeMinutes(schema.timestamp)} 
+            : null; 
         }
-        setChartState(newChartState);
-      })()
+        // Update state 
+        dispatch({ 
+          type: "load-schema",  
+          chart_state: { 
+            schema: new_schema, 
+            status_chart: "stable", 
+            status_refresh_endpoint: new_status_refresh_endpoint, 
+            status_storage_endpoint: new_status_storage_endpoint, 
+            user_can_refresh: false,
+          }
+        })
+      })();
     }
-  }, [chartState.status_chart]);
+  }, [schema, status_chart, name]);
+
+  useEffect(() => {
+    // Update user_can_refresh whenever any of the state variables that determine it change. 
+    const new_user_can_refresh: boolean = (
+      status_chart === "stable" 
+      && (
+        !schema
+        || (
+          schema !== null 
+          && schema.timestamp !== null 
+          && isSchemaPastAgeThreshold(computeAgeMinutes(schema.timestamp))
+        )
+      )
+    );
+    if (new_user_can_refresh !== user_can_refresh) {
+      dispatch({type: "toggle-user-can-refresh"});
+    }
+  }, [user_can_refresh, status_chart, schema]); 
 
   useInterval(() => {
-    // Updates schema age and chart refreshability status on a time interval 
-    // Only performs these updates when a schema is present, so note that 
-    // user_can_refresh will only be updated when there is a backing schema. 
-    if (chartState.schema && chartState.schema.timestamp) {
-      // TODO: @Silo Chad, right now, I'm updating the chart age every second for all charts 
-      //      do you see any potential performance concerns here? I have no idea what i'm doing tbh. 
-      const age_minutes = computeAgeMinutes(chartState.schema.timestamp); 
-      setChartState({
-        ...chartState, 
-        schema: {...chartState.schema, age_minutes}, 
-        user_can_refresh: canUserRefresh(age_minutes)
-      });
+    // Update schema age every RECOMPUTE_SCHEMA_AGE_SECONDS seconds when schema exists 
+    // TODO: @Silo Chad, right now, I'm updating the chart age every second for all charts 
+    //      do you see any potential performance concerns here? 
+    if (schema && schema.timestamp) {
+      dispatch({type: "update-schema-age"}); 
     }
   }, RECOMPUTE_SCHEMA_AGE_SECONDS * 1000);
 
   // Passed to tooltip so it can trigger chart updates 
-  const handleRefreshChart = () => setDoUpdate(true); 
+  const handleRefreshChart = () => {
+    if (user_can_refresh) {
+      dispatch({type: "start-loading"});
+    }
+  }; 
 
-  // Chart body content 
-  const chartContent = (
-    chartState.status_storage_endpoint === "loading" ? (
-      <div className="flex items-center justify-center" style={{ height }}>
-        Loading...
+  let statusString; 
+  let statusIndicatorColorClass; 
+  if (status_chart !== "stable") {
+    // If chart is not stable, we show different color to indicate loading is ongoing
+    statusString = "loading"; 
+    statusIndicatorColorClass = "bg-yellow-500 w-2 h-2 animate-ping"; 
+  } else if (status_storage_endpoint === "failure" || !schema) {
+    /* If chart is stable but 
+    1. Last storage request failed 
+    2. Schema is null 
+    We show red. Note that this does not necessarily mean that schema 
+    is null. If the  storage call succeeded previously but failed on our 
+    last attempt then the chart will show data but the indicator will be red. */
+    statusString = !schema ? "failure" : "failure to reload"; 
+    statusIndicatorColorClass = "bg-red-500 w-3.5 h-3.5"; 
+  } else if (!user_can_refresh) {
+    // Schema is present and non-refreshable, we show green
+    statusString = "up to date"; 
+    statusIndicatorColorClass = "bg-green-500 w-3.5 h-3.5"; 
+  } else {
+    // Schema is present and refreshable, we show yellow
+    statusString = "refreshable"; 
+    statusIndicatorColorClass = "bg-yellow-500 w-3.5 h-3.5"; 
+  }
+
+  let chartBody; 
+  if (status_chart !== "stable") {
+    chartBody = <div className="flex items-center justify-center" style={{ height }}>
+      Loading...
+    </div>;
+  } else {
+    chartBody = !schema ? null : (
+      <div className="flex items-center justify-center">
+        <VegaLite spec={schema.schema as Object} height={height} />
       </div>
-    ) : (
-      <div>
-        <div className="grid gap-4 grid-cols-2 grid-rows-1">
-          <div className="p-2"><h4 className="font-bold">{name}</h4></div>
-          <div className="flex justify-end p-2">
-            <ChartInfoPopover {...chartState} refreshChart={handleRefreshChart}>
-              <h6 className="font-bold inline">status:</h6>
-              <p className="inline ml-1 mr-2">{chartState.user_can_refresh ? chartState.user_can_refresh : "failed"}</p>
-              <div className="inline-flex items-center">
-                <div className={`rounded-full w-3.5 h-3.5
-                ${chartState.user_can_refresh === "updated" ? "bg-green-500" : 
-                  chartState.user_can_refresh === "refreshable" ? "bg-yellow-500" : 
-                  chartState.user_can_refresh === null ? "bg-red-500" : ''}`
-                }></div>
-              </div>
-            </ChartInfoPopover>
+    ); 
+  }
+
+  return <div>
+    {/* Chart Header */}
+    <div className="grid gap-4 grid-cols-2 grid-rows-1">
+      <div className="p-2"><h4 className="font-bold">{name}</h4></div>
+      <div className="flex justify-end p-2">
+        <ChartInfoPopover {...state} refreshChart={handleRefreshChart}>
+          <h6 className="font-bold inline">status:</h6>
+          <p className="inline ml-1 mr-2">{statusString}</p>
+          <div className="inline-flex items-center">
+            <div className={`rounded-full w-3.5 h-3.5 ${statusIndicatorColorClass}`}></div>
           </div>
-        </div>
-        {chartState.status_storage_endpoint === "failed" ? null : (
-          <div className="flex items-center justify-center">
-            <VegaLite spec={chartState.schema as Object} height={height} />
-          </div>
-        )}
+        </ChartInfoPopover>
       </div>
-    )
-  ); 
-
-  // const chartContent = (
-  //   chartState.status_storage_endpoint === "loading" ? (
-  //     <div className="flex items-center justify-center" style={{ height }}>
-  //       Loading...
-  //     </div>
-  //   ) : 
-  //   chartState.status_storage_endpoint === "loaded" ? (
-  //     <div>
-  //       <div className="grid gap-4 grid-cols-2 grid-rows-1">
-  //         <div className="p-2"><h4 className="font-bold">{name}</h4></div>
-  //         <div className="flex justify-end p-2">
-  //           <ChartInfoPopover {...chartState}>
-  //             <h6 className="font-bold inline">status:</h6>
-  //             <p className="inline ml-1 mr-2">{chartState.user_can_refresh}</p>
-  //             <div className="inline-flex items-center">
-  //               <div className={`rounded-full w-3.5 h-3.5
-  //               ${chartState.user_can_refresh === "updated" ? "bg-green-500" : 
-  //                 chartState.user_can_refresh === "refreshable" ? "bg-yellow-500" : 
-  //                 chartState.user_can_refresh === "failed" ? "bg-red-500" : ''}`
-  //               }></div>
-  //             </div>
-  //           </ChartInfoPopover>
-  //         </div>
-  //       </div>
-  //       <div className="flex items-center justify-center">
-  //         <VegaLite spec={chartState.schema as Object} height={height} />
-  //       </div>
-  //     </div>
-  //   ) : (
-  //     <div className="flex items-center justify-center" style={{ height }}>
-  //       Something went wrong while loading chart {name}.
-  //     </div>
-  //   )
-  // );
-
-  return chartContent; 
+    </div>
+    {chartBody}
+  </div>;
 
 }
 

@@ -71,6 +71,10 @@ frontend-%-bucket-local: NEXT_PUBLIC_STORAGE_BUCKET_NAME=$(BUCKET_EMULATOR)
 frontend-%-bucket-gcp: NEXT_PUBLIC_CDN=https://storage.googleapis.com
 frontend-%-bucket-gcp: NEXT_PUBLIC_STORAGE_BUCKET_NAME=$(BUCKET_DEV)
 
+.PHONY: frontend-lint
+frontend-lint: 
+	@yarn lint 
+
 .PHONY: frontend-dev-bucket-local
 frontend-dev-bucket-local: 
 	@yarn dev 
