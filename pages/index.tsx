@@ -10,7 +10,7 @@ import { delay, isNumber } from "lodash";
 
 
 const RECOMPUTE_SCHEMA_AGE_SECONDS = 1; 
-const SCHEMA_MAX_AGE_MINUTES = .1; 
+const SCHEMA_MAX_AGE_MINUTES = 15; 
 const ARTIFICIAL_DELAY = true; 
 
 
@@ -138,6 +138,8 @@ const ChartInfoPopover: React.FC<ChartInfoPopoverProps> = ({
   const valueClassName = "text-slate-700"; 
   // TODO: The popover button focus state is behaving really strangely. 
   //        Not super high priorty but would be nice to fix. @SiloChad any recs here? 
+  //        I'm guessing this is related to the fact that this button element 
+  //        has a bunch of divs as children but idk. 
   return (
     <Popover className="relative">
       {({ open }) => (
