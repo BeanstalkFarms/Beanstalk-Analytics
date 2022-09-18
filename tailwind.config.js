@@ -16,6 +16,7 @@ module.exports = {
       slate: colors.slate,
       blue: colors.blue, 
       gray: colors.gray, 
+      orange: colors.orange, 
     },
   },
   plugins: [
