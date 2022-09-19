@@ -1,7 +1,7 @@
 import { NextPage } from "next";
 import React from 'react';
 import { PropsWithChildren, PropsWithoutRef, useEffect, useReducer, useState, useRef } from "react";
-import { VegaLite } from 'react-vega';
+import { VegaLite, VisualizationSpec } from 'react-vega';
 import { Popover } from '@headlessui/react'
 import Module from "../components/Module";
 import Page from "../components/Page";
@@ -244,6 +244,27 @@ const ChartStatusBox: React.FC<ChartStatusBoxProps> = ({
 
 }
 
+
+const VegaLiteWrapper: React.FC<{ name: string, spec: Object, height: number }> = ({ name, spec, height }) => {
+  
+  if (spec) {
+    // if (name === "FertilizerBreakdown") {
+    //   // @ts-ignore
+    //   spec = {
+    //     ...spec, 
+    //     hconcat: [
+    //       // @ts-ignore
+    //       {...spec.hconcat[0], width: 100},
+    //       // @ts-ignore
+    //       {...spec.hconcat[1], width: 100},
+    //     ]
+    //   }
+    // }
+  }
+  
+  return <VegaLite spec={spec} height={height}></VegaLite>
+}; 
+
 function reducerAfterware(state: ChartState) {
   // Run after all reducer actions. 
   // If schema exists, we update it's age. 
@@ -382,9 +403,7 @@ const Chart : React.FC<{ name: string; height?: number; }> = ({ name, height = 3
   } else {
     // Regardless of chart state, if the schema exists, we show the chart.
     chartBody = <div className="flex items-center justify-center">
-      <VegaLite spec={schema.schema as Object} height={height} 
-      // width={800}
-      />
+      <VegaLiteWrapper name={name} spec={schema.schema as Object} height={height}/>
     </div>;
   }
 
@@ -400,6 +419,7 @@ const Chart : React.FC<{ name: string; height?: number; }> = ({ name, height = 3
         </ChartInfoPopover>
       </div>
     </div>
+    {/* Chart body */}
     {chartBody}
   </div>;
 
