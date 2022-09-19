@@ -1,0 +1,71 @@
+{
+    "timestamp": "2022-09-19T16:00:54.449307+00:00",
+    "run_time_seconds": 13.926450252532959,
+    "schema": {
+        "$schema": "https://vega.github.io/schema/vega-lite/v4.17.0.json",
+        "config": {
+            "view": {
+                "continuousHeight": 300,
+                "continuousWidth": 400
+            }
+        },
+        "data": {
+            "name": "data-714c1213cd79f669d760c1ee0af35049"
+        },
+        "datasets": {
+            "data-714c1213cd79f669d760c1ee0af35049": [
+                {
+                    "season": 7130,
+                    "token_address": "0xbea0000029ad1c77d3d5d23ba2d8893db9d1efab",
+                    "token_name": "bean",
+                    "value": 1681041.142527,
+                    "variable": "total_deposited_bdv"
+                },
+                {
+                    "season": 7130,
+                    "token_address": "0xc9c32cd16bf7efb85ff14e0c8603cc90f6f2ee49",
+                    "token_name": "bean_3crv",
+                    "value": 878512.557709,
+                    "variable": "total_deposited_bdv"
+                },
+                {
+                    "season": 7130,
+                    "token_address": "0x1bea0050e63e05fbb5d8ba2f10cf5800b6224449",
+                    "token_name": "ur_bean",
+                    "value": 10933681.054318,
+                    "variable": "total_deposited_bdv"
+                },
+                {
+                    "season": 7130,
+                    "token_address": "0x1bea3ccd22f4ebd3d37d731ba31eeca95713716d",
+                    "token_name": "ur_bean_3crv",
+                    "value": 27024431.301453,
+                    "variable": "total_deposited_bdv"
+                }
+            ]
+        },
+        "encoding": {
+            "color": {
+                "field": "token_name",
+                "legend": {},
+                "type": "nominal"
+            },
+            "theta": {
+                "field": "value",
+                "stack": true,
+                "type": "quantitative"
+            },
+            "tooltip": {
+                "field": "value",
+                "format": ",d",
+                "type": "quantitative"
+            }
+        },
+        "mark": {
+            "innerRadius": 75,
+            "outerRadius": 120,
+            "type": "arc"
+        },
+        "title": "Silo Deposit by Token (BDV)"
+    }
+}

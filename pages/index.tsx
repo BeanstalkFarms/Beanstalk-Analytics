@@ -1,5 +1,6 @@
 import { NextPage } from "next";
 import React from 'react';
+import useSize from '@react-hook/size';
 import { PropsWithChildren, PropsWithoutRef, useEffect, useReducer, useState, useRef } from "react";
 import { VegaLite, VisualizationSpec } from 'react-vega';
 import { Popover } from '@headlessui/react'
@@ -246,23 +247,44 @@ const ChartStatusBox: React.FC<ChartStatusBoxProps> = ({
 
 
 const VegaLiteWrapper: React.FC<{ name: string, spec: Object, height: number }> = ({ name, spec, height }) => {
+
+  const [tweaking, setTweaking] = useState<boolean>(true); 
+  const refWrapper = useRef<HTMLDivElement>(null); 
+  const [w, h] = useSize(refWrapper);
+
+  /* 
+  - If schema.config.view.continuousWidth and schema.config.view.continuousHeight defined
+    - Then this is a simple chart (i.e. either a single chart or layer chart)
+
+
+
+  1. Render component with ref 
+
+  */ 
+
+  // console.log(w, h);
   
   if (spec) {
+    // const neww = 300 + Math.random() * 100; 
     // if (name === "FertilizerBreakdown") {
     //   // @ts-ignore
     //   spec = {
     //     ...spec, 
     //     hconcat: [
     //       // @ts-ignore
-    //       {...spec.hconcat[0], width: 100},
+    //       {...spec.hconcat[0], width: neww},
     //       // @ts-ignore
-    //       {...spec.hconcat[1], width: 100},
+    //       {...spec.hconcat[1], width: neww},
     //     ]
     //   }
     // }
   }
+
+  console.log()
   
-  return <VegaLite spec={spec} height={height}></VegaLite>
+  return <div ref={refWrapper}>
+    <VegaLite spec={spec} height={height}></VegaLite>
+  </div>
 }; 
 
 function reducerAfterware(state: ChartState) {

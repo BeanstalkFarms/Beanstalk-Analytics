@@ -9,6 +9,7 @@ notebook
 google-cloud-storage
 google-api-python-client
 functions-framework==3.*
+deepdiff
 python-dotenv # TODO: Can we make this a dev dependency?
 python-box # TODO: convert Box's to dataclasses to remove this dep. 
 # python-graphql-client 
