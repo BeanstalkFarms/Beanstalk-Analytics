@@ -28,7 +28,7 @@ def handle_cors_preflight():
 @functions_framework.http
 def bean_analytics_http_handler(request):
     """Matches incoming url path to appropriate handler. """
-    
+
     # Set CORS headers for the preflight request
     if request.method == 'OPTIONS':
         return handle_cors_preflight() 

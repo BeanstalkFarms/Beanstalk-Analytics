@@ -1,17 +1,17 @@
 import { NextPage } from "next";
 import React from 'react';
-import { PropsWithChildren, useEffect, useReducer, useState, useRef } from "react";
+import { PropsWithChildren, PropsWithoutRef, useEffect, useReducer, useState, useRef } from "react";
 import { VegaLite } from 'react-vega';
 import { Popover } from '@headlessui/react'
 import Module from "../components/Module";
 import Page from "../components/Page";
 import useInterval from "../hooks/useInterval"; 
-import { delay, isNumber } from "lodash";
+import { isNumber } from "lodash";
 
 
 const RECOMPUTE_SCHEMA_AGE_SECONDS = 1; 
 const SCHEMA_MAX_AGE_MINUTES = 15; 
-const ARTIFICIAL_DELAY = true; 
+const ARTIFICIAL_DELAY = false; 
 
 
 if (!process.env.NEXT_PUBLIC_STORAGE_BUCKET_NAME) throw new Error('Environment: Missing bucket');
@@ -70,6 +70,8 @@ type ChartState = {
 interface ChartInfoPopoverProps extends PropsWithChildren, ChartState {
   refreshChart: () => void 
 }; 
+
+interface ChartStatusBoxProps extends ChartState {}; 
 
 class SchemaTimestamp {
 
@@ -191,6 +193,57 @@ const ChartInfoPopover: React.FC<ChartInfoPopoverProps> = ({
   )
 }
 
+const ChartStatusBox: React.FC<ChartStatusBoxProps> = ({
+  schema, status_storage_endpoint, user_can_refresh, status_chart
+}) => {
+
+  let pingAnimation = false; 
+  let pingAnimationClass = "animate-ping opacity-75"
+  let statusString; 
+  let statusIndicatorColorClass; 
+  if (status_chart !== "stable") {
+    // We are loading a new schema 
+    pingAnimation = true; 
+    statusString = "loading"; 
+    statusIndicatorColorClass = "bg-blue-500"; 
+  } else if (status_storage_endpoint === "failure" && schema) {
+    // Chart is stable. Couldn't load new schema but old schema exists.
+    statusString = "failed to refresh"; 
+    statusIndicatorColorClass = "bg-orange-500"; 
+  } else if (status_storage_endpoint === "failure" && !schema) {
+    // Chart is stable. Couldn't load new schema and no old schema exists. 
+    statusString = "failed"; 
+    statusIndicatorColorClass = "bg-red-500"; 
+  } else if (schema && !user_can_refresh) {
+    // Chart is stable. Schema is present and non-refreshable
+    statusString = "up to date"; 
+    statusIndicatorColorClass = "bg-green-500"; 
+  } else if (schema && user_can_refresh) {
+    // Chart is stable. Schema is present and refreshable
+    statusString = "refreshable"; 
+    statusIndicatorColorClass = "bg-yellow-500"; 
+  } else {
+    throw new Error(`Invalid state. 
+    schema: ${schema ? 'exists' : 'null'}
+    user_can_refresh: ${user_can_refresh}
+    status_storage_endpoint: ${status_storage_endpoint}
+    status_chart: ${status_chart}`); 
+  }
+
+  return <div className="flex justify-center pl-2 pr-2 pt-1 pb-1">
+    <h6 className="font-bold inline">status:</h6>
+    <p className="inline ml-1 mr-2">{statusString}</p>
+    <div className="inline-flex items-center">
+        {pingAnimation ? 
+          <span className={`absolute rounded-full w-3.5 h-3.5 ${statusIndicatorColorClass} ${pingAnimationClass}`}></span>
+          : null 
+        }
+        <span className={`relative rounded-full w-3.5 h-3.5 ${statusIndicatorColorClass}`}></span>
+    </div>
+  </div>;
+
+}
+
 function reducerAfterware(state: ChartState) {
   // Run after all reducer actions. 
   // If schema exists, we update it's age. 
@@ -249,7 +302,7 @@ function reducer(state: ChartState, action: Action): ChartState {
 const Chart : React.FC<{ name: string; height?: number; }> = ({ name, height = 300 }) => {
 
   const [state, dispatch] = useReducer(reducer, initialState); 
-  const { schema, status_chart, status_storage_endpoint, user_can_refresh } = state; 
+  const { schema, status_chart, user_can_refresh } = state; 
 
   useEffect(() => {
     if (status_chart === 'pre-loading') {
@@ -319,50 +372,20 @@ const Chart : React.FC<{ name: string; height?: number; }> = ({ name, height = 3
     if (schema) dispatch({type: "update-schema-age"}); 
   }, RECOMPUTE_SCHEMA_AGE_SECONDS * 1000);
 
+  // Determine the chart body 
   let chartBody; 
-  if (status_chart !== "stable") {
+  if (!schema) {
+    const bodyText = ["pre-loading", "loading"].includes(status_chart) ? "Loading..." : "Error"; 
     chartBody = <div className="flex items-center justify-center" style={{ height }}>
-      Loading...
+      {bodyText}
     </div>;
   } else {
-    chartBody = !schema ? null : (
-      <div className="flex items-center justify-center">
-        <VegaLite spec={schema.schema as Object} height={height}/>
-      </div>
-    ); 
-  }
-
-  // Passed to tooltip so it can trigger chart updates 
-  const handleRefreshChart = () => {
-    if (user_can_refresh) dispatch({type: "start-loading"});
-  }; 
-
-  let pingAnimation = false; 
-  let pingAnimationClass = "animate-ping opacity-75"
-  let statusString; 
-  let statusIndicatorColorClass; 
-  if (status_chart !== "stable") {
-    // If chart is not stable (i.e. loading), we show blue pinging indicator
-    pingAnimation = true; 
-    statusString = "loading"; 
-    statusIndicatorColorClass = "bg-blue-500"; 
-  } else if (status_storage_endpoint === "failure" || !schema) {
-    /* If chart is stable but 
-    1. Last storage request failed 
-    2. Schema is null 
-    We show red. Note that this does not necessarily mean that schema 
-    is null. If the  storage call succeeded previously but failed on our 
-    last attempt then the chart will show data but the indicator will be red. */
-    statusString = !schema ? "failure" : "failure to reload"; 
-    statusIndicatorColorClass = "bg-red-500"; 
-  } else if (!user_can_refresh) {
-    // Schema is present and non-refreshable, we show green
-    statusString = "up to date"; 
-    statusIndicatorColorClass = "bg-green-500"; 
-  } else {
-    // Schema is present and refreshable, we show yellow
-    statusString = "refreshable"; 
-    statusIndicatorColorClass = "bg-yellow-500"; 
+    // Regardless of chart state, if the schema exists, we show the chart.
+    chartBody = <div className="flex items-center justify-center">
+      <VegaLite spec={schema.schema as Object} height={height} 
+      // width={800}
+      />
+    </div>;
   }
 
   return <div>
@@ -370,18 +393,10 @@ const Chart : React.FC<{ name: string; height?: number; }> = ({ name, height = 3
     <div className="grid gap-4 grid-cols-2 grid-rows-1">
       <div className="p-2"><h4 className="font-bold">{name}</h4></div>
       <div className="flex justify-end">
-        <ChartInfoPopover {...state} refreshChart={handleRefreshChart}>
-          <div className="flex justify-center pl-2 pr-2 pt-1 pb-1">
-            <h6 className="font-bold inline">status:</h6>
-            <p className="inline ml-1 mr-2">{statusString}</p>
-            <div className="inline-flex items-center">
-                {pingAnimation ? 
-                  <span className={`absolute rounded-full w-3.5 h-3.5 ${statusIndicatorColorClass} ${pingAnimationClass}`}></span>
-                  : null 
-                }
-                <span className={`relative rounded-full w-3.5 h-3.5 ${statusIndicatorColorClass}`}></span>
-            </div>
-          </div>
+        <ChartInfoPopover {...state} refreshChart={() => {
+          if (user_can_refresh) dispatch({type: "start-loading"});
+        }}>
+          <ChartStatusBox {...state}/>
         </ChartInfoPopover>
       </div>
     </div>
@@ -403,22 +418,22 @@ const Home: NextPage = () => {
           <Module>
             <Chart name="FarmersMarketHistory" />
           </Module>
-        </div>
+        </div> */}
         <div className="col-span-6">
           <Module>
             <Chart name="FertilizerBreakdown" />
           </Module>
-        </div> */}
+        </div>
         <div className="col-span-6">
           <Module>
             <Chart name="FieldOverview" />
           </Module>
         </div>
-        <div className="col-span-6">
+        {/* <div className="col-span-6">
           <Module>
             <Chart name="noexist" />
           </Module>
-        </div>
+        </div> */}
       </div>
     </Page>
   );
