@@ -52,8 +52,6 @@ RPATH_NOTEBOOKS_TEST=notebooks/testing
 RPATH_NOTEBOOKS_PROD=notebooks/prod
 # By default, we use prod notebook path. For emulator tests, we override this value 
 RPATH_NOTEBOOKS=$(RPATH_NOTEBOOKS_PROD)
-# The url of the subgraph that the production notebooks will query to retrieve data 
-SUBGRAPH_URL=https://graph.node.bean.money/subgraphs/name/beanstalk-testing
 
 # -----------------------------------------------------------------------------------------------
 # RULES
@@ -238,3 +236,20 @@ deploy-api: build-api
 		--allow-unauthenticated
 	@echo "Removing temporary environment file ${GCLOUD_ENV_FILE}"
 	@rm $(GCLOUD_ENV_FILE)
+
+
+# RULES - BACKEND - Utility 
+# -----------------------------------------------------------------------------------------------
+.PHONY: profile_notebooks 
+profile_notebooks: RPATH_NOTEBOOKS=$(PATH_SERVERLESS_CODE_DEV)/$(RPATH_NOTEBOOKS_PROD)
+profile_notebooks: 
+	@python serverless/script_profile_notebooks.py
+
+
+.PHONY: execute_notebooks 
+execute_notebooks: RPATH_NOTEBOOKS=$(PATH_SERVERLESS_CODE_DEPLOY)/$(RPATH_NOTEBOOKS_PROD)
+execute_notebooks: build-api-quiet
+	@python serverless/script_execute_notebooks.py \
+		--all \
+		--output-dir serverless/notebooks/dev/layout-sizing/schemas \
+		

@@ -7,7 +7,7 @@ import { Popover } from '@headlessui/react'
 import Module from "../components/Module";
 import Page from "../components/Page";
 import useInterval from "../hooks/useInterval"; 
-import { isNumber } from "lodash";
+import { isNumber, get, set, cloneDeep } from "lodash";
 
 
 const RECOMPUTE_SCHEMA_AGE_SECONDS = 1; 
@@ -40,6 +40,8 @@ type Schema = {
   age_minutes: number
   // The amount of time in seconds that it took the server to internally generate this schema object 
   query_runtime_secs: number
+  // The paths into the spec that must be modified for changing width dynamically 
+  width_paths: Array<string>
 }
 
 // Represents the most recent status of an api call 
@@ -246,44 +248,124 @@ const ChartStatusBox: React.FC<ChartStatusBoxProps> = ({
 }
 
 
-const VegaLiteWrapper: React.FC<{ name: string, spec: Object, height: number }> = ({ name, spec, height }) => {
+const VegaLiteWrapper: React.FC<{ 
+  name: string, spec: Object, width_paths: Array<Array<string | number>>, height: number 
+}> = ({ name, spec, width_paths, height }) => {
 
-  const [tweaking, setTweaking] = useState<boolean>(true); 
-  const refWrapper = useRef<HTMLDivElement>(null); 
-  const [w, h] = useSize(refWrapper);
+  const apply_w_factor = (s: Object, wpaths: Array<Array<string | number>>, wf: number) => {
+    wpaths = wpaths.map(arr => arr.map(v => v.toString())); 
+    for (let wp of wpaths) {
+      wp = wp.slice(1); // root is always first element of path
+      set(s, wp, get(s, wp, undefined) * wf); 
+    }
+    return s; 
+  }; 
 
-  /* 
-  - If schema.config.view.continuousWidth and schema.config.view.continuousHeight defined
-    - Then this is a simple chart (i.e. either a single chart or layer chart)
+  const ref_wrapper = useRef<HTMLDivElement>(null); 
+  const w_target = 600; 
+  const w_tol = 10; 
+  const [state, set_state] = useState<{ 
+    vspec: Object,          // vega-lite spec 
+    w_factor: number,       // multiplicative factor by which we multiply all vega-lite width path values 
+    w_factor_delta: number, // additive factor by which we change w_factor when resizing. 
+    w_last: number          // the last value of w 
+  }>({ 
+    vspec: cloneDeep(spec),
+    w_factor: 1, 
+    w_factor_delta: .15, 
+    w_last: -1 
+  }); 
+  const [w, h] = useSize(ref_wrapper);
+  const { vspec, w_factor, w_factor_delta, w_last } = state; 
 
+  useEffect(() => {
+    const rendered = w !== 0; 
+    const too_small = rendered && w < w_target - w_tol; 
+    const too_large = rendered && w > w_target + w_tol;
+    if (w_factor < 0) {
+      throw new Error("uggggghhhhhh")
+    }
+    if (spec && rendered) {
+      if (too_small) {
+        // Need to increase size of chart 
+        if ((w_last > w_target + w_tol) && w_last > w) {
+          // On last iteration, chart was too large, then we overshot optimal range.
+          // w_factor_delta is too large 
+          // w_factor is too small 
+          
+          let new_w_factor_delta = w_factor_delta / 2; 
+          let new_w_factor = w_factor + new_w_factor_delta
+          let new_vspec = apply_w_factor({...vspec}, width_paths, 1 / w_factor * new_w_factor); 
+          console.log(`${w} Too small. w_factor: ${w_factor} -> ${new_w_factor} / w_factor_delta: ${w_factor_delta} -> ${new_w_factor_delta}`); 
+          console.log(new_vspec); 
+          set_state({ 
+            vspec: new_vspec, 
+            w_factor: new_w_factor, 
+            w_factor_delta: new_w_factor_delta, 
+            w_last: w 
+          }); 
+        } else {
+          // We did not overshoot the optimal range, and are still below it 
+          // w_factor_delta is fine 
+          // w_factor is too small 
+          let new_w_factor = w_factor + w_factor_delta
+          let new_vspec = apply_w_factor({...vspec}, width_paths, 1 / w_factor * new_w_factor); 
+          console.log(`${w} Too small. w_factor: ${w_factor} -> ${new_w_factor}`); 
+          console.log(new_vspec); 
+          set_state({ 
+            vspec: new_vspec, 
+            w_factor: new_w_factor, 
+            w_factor_delta, 
+            w_last: w 
+          });
+        }
+      } else if (too_large) {
+        // Need to decrease size of chart 
+        if ((w_last < w_target - w_tol) && w_last < w) {
+          // On last iteration, chart was too small, then we overshot optimal range.
+          // w_factor_delta is too large 
+          // w_factor is too large 
+          let new_w_factor_delta = w_factor_delta / 2; 
+          let new_w_factor = w_factor - new_w_factor_delta; 
+          let new_vspec = apply_w_factor(cloneDeep({...vspec}), width_paths, 1.0 / w_factor * new_w_factor); 
+          console.log(`${w} Too wide. w_factor: ${w_factor} -> ${new_w_factor} / w_factor_delta: ${w_factor_delta} -> ${new_w_factor_delta}`); 
+          console.log(new_vspec); 
+          set_state({ 
+            vspec: new_vspec, 
+            w_factor: new_w_factor, 
+            w_factor_delta: new_w_factor_delta, 
+            w_last: w 
+          }); 
+        } else {
+          // We did not overshoot the optimal range, and are still above it 
+          // w_factor_delta is fine 
+          // w_factor is too large 
+          let new_w_factor = w_factor - w_factor_delta
+          let new_vspec = apply_w_factor(cloneDeep({...vspec}), width_paths, 1.0 / w_factor * new_w_factor); 
+          console.log(`${w} Too wide. w_factor: ${w_factor} -> ${new_w_factor}`); 
+          console.log(new_vspec); 
+          set_state({ 
+            vspec: new_vspec, 
+            w_factor: new_w_factor, 
+            w_factor_delta, 
+            w_last: w 
+          });
+        }
+      } else {
+        if (w_last !== w) {
+          set_state({...state, w_last: w}); 
+        }
+      }
+    } else {
+      if (w_last !== w) {
+        set_state({...state, w_last: w}); 
+      }
+    }
+    
+  })
 
-
-  1. Render component with ref 
-
-  */ 
-
-  // console.log(w, h);
-  
-  if (spec) {
-    // const neww = 300 + Math.random() * 100; 
-    // if (name === "FertilizerBreakdown") {
-    //   // @ts-ignore
-    //   spec = {
-    //     ...spec, 
-    //     hconcat: [
-    //       // @ts-ignore
-    //       {...spec.hconcat[0], width: neww},
-    //       // @ts-ignore
-    //       {...spec.hconcat[1], width: neww},
-    //     ]
-    //   }
-    // }
-  }
-
-  console.log()
-  
-  return <div ref={refWrapper}>
-    <VegaLite spec={spec} height={height}></VegaLite>
+  return <div ref={ref_wrapper}>
+    <VegaLite spec={vspec} height={height}></VegaLite>
   </div>
 }; 
 
@@ -387,6 +469,7 @@ const Chart : React.FC<{ name: string; height?: number; }> = ({ name, height = 3
             timestamp: schema_timestamp, 
             query_runtime_secs: parseFloat(res.run_time_seconds),
             age_minutes: schema_timestamp.get_age_minutes(), 
+            width_paths: res.width_paths
           }
         } catch (e) {
           console.error(e);
@@ -425,7 +508,11 @@ const Chart : React.FC<{ name: string; height?: number; }> = ({ name, height = 3
   } else {
     // Regardless of chart state, if the schema exists, we show the chart.
     chartBody = <div className="flex items-center justify-center">
-      <VegaLiteWrapper name={name} spec={schema.schema as Object} height={height}/>
+      <VegaLiteWrapper 
+      name={name} 
+      spec={schema.schema as Object} 
+      height={height}
+      width_paths={schema.width_paths}/>
     </div>;
   }
 

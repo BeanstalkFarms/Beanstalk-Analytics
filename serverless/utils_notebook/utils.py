@@ -13,6 +13,9 @@ load_dotenv("../../.env")
 SUBGRAPH_URL = os.environ['SUBGRAPH_URL']
 
 
+def is_number(v): 
+    return type(v) == int or type(v) == float 
+
 def dict_invert(d: Dict): 
     """Inverts the key value mapping of a dict."""
     return {v: k for k, v in d.items()}

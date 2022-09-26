@@ -12,16 +12,10 @@ from google.api_core.exceptions import NotFound
 from google.cloud import storage 
 import google.auth 
 
-
 logger = logging.getLogger(__name__)
 
 from google.cloud.storage._helpers import _get_storage_host
 logger.info(f"Storage host: {_get_storage_host()}")
-
-
-BUCKET_NAME = os.environ["NEXT_PUBLIC_STORAGE_BUCKET_NAME"]
-RPATH_NOTEBOOKS = os.environ["RPATH_NOTEBOOKS"]
-CREDENTIALS, PROJECT_ID = google.auth.load_credentials_from_file(os.environ['GOOGLE_APPLICATION_CREDENTIALS'])
 
 
 def log_runtime_decorator(log_func=None): 
@@ -47,8 +41,9 @@ def log_runtime_decorator(log_func=None):
 class StorageClient: 
 
     def __init__(self) -> None:
-        self.client = storage.Client(project=PROJECT_ID, credentials=CREDENTIALS)
-        self.bucket = self.client.bucket(BUCKET_NAME)
+        credentials, project_id = google.auth.load_credentials_from_file(os.environ['GOOGLE_APPLICATION_CREDENTIALS'])
+        self.client = storage.Client(project=project_id, credentials=credentials)
+        self.bucket = self.client.bucket(os.environ["NEXT_PUBLIC_STORAGE_BUCKET_NAME"])
 
     def get_blob(self, name: str, cur_dtime: datetime.datetime): 
         blob = self.bucket.blob(name)
@@ -76,7 +71,7 @@ class StorageClient:
 class NotebookRunner: 
 
     def __init__(self): 
-        self.path_notebooks = Path(RPATH_NOTEBOOKS)
+        self.path_notebooks = Path(os.environ["RPATH_NOTEBOOKS"])
         self.ntbk_name_path_map: Dict[str, str] = {
             # Allows for case insensitive matchine of chart names 
             nb_path.stem.lower(): nb_path 
@@ -102,7 +97,6 @@ class NotebookRunner:
             Args: 
                 nb_name: The key for the notebook. 
             Returns: 
-                nb_name: The name of the notebook.
                 nb_output_json: The data output of the notebook. 
         """
         nb_path: Path = self.ntbk_name_path_map[nb_name]

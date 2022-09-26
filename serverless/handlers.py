@@ -4,6 +4,7 @@ import logging
 from typing import Tuple  
 
 from utils_serverless.utils import StorageClient, NotebookRunner
+from utils_notebook.vega import compute_width_paths
 
 
 logger = logging.getLogger(__name__)
@@ -65,10 +66,12 @@ def handler_charts_refresh(request) -> Tuple[any, int]:
             if compute_schema:
                 status = "recomputed"
                 schema = nbr.execute(schema_name)
+                width_paths = compute_width_paths(schema)
                 data = {
                     "timestamp": cur_dtime.isoformat(), 
                     "run_time_seconds": nbr.execute._decorated_run_time_seconds,
                     "schema": schema,
+                    "width_paths": width_paths, 
                 }
                 sc.upload(blob, json.dumps(data))
             else: 
