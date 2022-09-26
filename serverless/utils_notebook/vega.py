@@ -68,23 +68,42 @@ def compute_width_paths(schema: dict):
             assert is_number(v) 
             keep_keys.add(p) 
     m_w_step = {p for p, v in m_w_step.items() if p in keep_keys} 
-    
     # ----------------------------------------------------------------------------
-    # 3. Disallow certain types of autosize 
+    # 3. Mark specific properties 
+
+    # 3.1. Radius properties for arc marks 
+    m_radius = set() 
+    for key in ["innerRadius", "outerRadius"]: 
+        m = DeepSearch(schema, key, verbose_level=2).get('matched_paths', {})
+        for k, v in m.items(): 
+            if not k.endswith(f"['{key}']") or not float(v): 
+                raise ValueError(f"Value for mark property {k} must be number")
+        m_radius = m_radius.union(list(m.keys())) 
+
+    # ----------------------------------------------------------------------------
+    # 4. Disallow certain types of autosize 
     if schema.get("autosize", {}).get("type", None) in ['fit', 'fit-x', 'fit-y']: 
         raise ValueError("autosize fit not allowed")
     
     # ----------------------------------------------------------------------------
-    # 4. Combine all different path types together. Convert from string form 
+    # 5. Combine all different path types together. Convert from string form 
     #    to list of attribute accesses. 
-    wpaths = [
-        [list(e)[0] for e in _path_to_elements(wps)]
-        for wps in (
-            m_view_cw
-            .union(m_view_dw)
-            .union(m_view_step)
-            .union(m_w) 
-            .union(m_w_step)
-        )
-    ]
+    wpaths = []
+    for wpath_str in (
+        m_view_cw
+        .union(m_view_dw)
+        .union(m_view_step)
+        .union(m_w) 
+        .union(m_w_step)
+    ): 
+        # Properties that directly control width have no multiplier 
+        wpath = [list(e)[0] for e in _path_to_elements(wpath_str)]
+        wpaths.append({"path": wpath[1:], "factor": 1})
+    for wpath_str in m_radius: 
+        # Properties that control the radius of marks for arc marks have a multiplier of .5 
+        # This is because for every 1 pixel we want to decrease width, we should decrease 
+        # the radius by .5 pixels. 
+        wpath = [list(e)[0] for e in _path_to_elements(wpath_str)]
+        wpaths.append({"path": wpath[1:], "factor": 2})
+
     return wpaths 
