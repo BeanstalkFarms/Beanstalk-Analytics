@@ -4,7 +4,7 @@ import { useEffect, useReducer, useRef } from "react";
 import { VegaLite } from 'react-vega';
 import { get, set, cloneDeep } from "lodash";
 
-export type WidthPaths = Array<{ path: Array<string | number>, factor: number }>; 
+export type WidthPaths = Array<{ path: Array<string | number>, factor: number, value: number }>; 
 
 type State = {
   // vega-lite spec 
@@ -23,7 +23,7 @@ type State = {
 
 const getInitialState = (spec: Object) => ({ 
     vega_lite_spec: cloneDeep(spec),
-    w_target: 600,
+    w_target: 300,
     w_tol: 10,
     w_factor: 1, 
     w_factor_delta: .15, 
@@ -43,16 +43,56 @@ type Action =
 
 function reducer(state: State, action: Action): State {
 
-    // const apply_w_factor = (s: Object, wpaths: WidthPaths, wf_old: number, wf_new: number) => {
-    //   for (let { path, factor } of wpaths) {
-    //     // Invert the previous multiplier calculation 
-    //     const m1 = (1 + Math.abs(wf_new - 1) / factor); 
-    //     let w_curr = get(s, path, undefined); 
-    //     let w_base = w_curr / (1 + Math.abs(wf_old - 1) / factor); 
-    //     set(s, path,  * m0 * m1); 
-    //   }
-    //   return s; 
-    // }; 
+    const apply_w_factor = (s: Object, wpaths: WidthPaths, wf: number) => {
+      for (let { path, factor, value } of wpaths) {
+        /* 2 examples illustrating how we use factor, value, and wf to determine current width: 
+        ------------------------------------------------------------------------
+        wpaths = [
+          {path: ["width"], factor: 1, value: 100},
+          {path: ["radius"], factor: 2, value: 100},
+        ]
+        schema = {
+          "width": 100,   
+          "radius": 100, 
+        }
+
+        Logically, factor decreases the impact of wf by a multiplicative factor  
+        Both factor and wf are inputs to multiplier 
+        - multiplier = 1 + (wf - 1) / factor 
+
+        ------------------------------------------------------------------------
+        example 1: wf = .9 
+        
+        - width goes from 100 -> 90
+        - radius goes from 100 -> 95 
+          - applying full wf (as is done to "width") decreases width by 10. 
+          - factor tells us to reduce the amount of decrease (10) by a factor of 2 yielding 10 / 2 = 5. 
+
+        compute multiplier for "width"
+        1 + (.9 - 1) / 1 = 1 + -.1 = .9
+
+        compute multiplier for "radius"
+        1 + (.9 - 1) / 2 = 1 + -.1 / 2 = .95
+
+        ------------------------------------------------------------------------
+        example 2: wf = 1.2
+       
+        - width goes from 100 -> 120
+        - radius goes from 100 -> 110 
+          - applying full wf (as is done to "width") increases width by 20. 
+          - factor tells us to reduce the amount of increase (20) by a factor of 2 yielding 20 / 2 = 10. 
+
+        compute multiplier for "width"
+        1 + (1.2 - 1) / 1 = 1 + .2 = 1.2
+
+        compute multiplier for "radius"
+        1 + (1.2 - 1) / 2 = 1 + .2 / 2 = 1.1 
+        */ 
+        const multiplier = 1 + (wf - 1) / factor; 
+        set(s, path, value * multiplier); 
+      }
+      return s; 
+    }; 
 
     switch (action.type) {
       case "update-width": 
@@ -72,8 +112,7 @@ function reducer(state: State, action: Action): State {
               //      how to make this more efficient. 
               cloneDeep({...state.vega_lite_spec}), 
               action.width_paths, 
-              state.w_factor, 
-              action.w_factor
+              action.w_factor,
           ),
           w_factor: action.w_factor, 
           w_factor_delta: get(action, "w_factor_delta", state.w_factor_delta), 
@@ -99,7 +138,7 @@ const VegaLiteChart: React.FC<{
     const too_large = rendered && w > w_target + w_tol;
     if (w_factor < 0) {
       // Failed to resize chart to the desired width. Should show an error to the user. 
-      throw new Error("uggggghhhhhh")
+      throw new Error("need to do something here lmao.")
     }
     if (spec && rendered) {
       if (too_small) {
@@ -136,23 +175,29 @@ const VegaLiteChart: React.FC<{
           // w_factor_delta is too large 
           // w_factor is too large 
           let new_w_factor_delta = w_factor_delta / 2; 
-          let new_w_factor = w_factor - new_w_factor_delta; 
+          while (w_factor - new_w_factor_delta < 0) {
+            new_w_factor_delta /= 2; 
+          }
           dispatch({ 
             type: "resize", 
             width_paths,
-            w_factor: new_w_factor, 
+            w_factor: w_factor - new_w_factor_delta, 
             w_factor_delta: new_w_factor_delta, 
             w
           }); 
         } else {
           // We did not overshoot the optimal range, and are still above it 
-          // w_factor_delta is fine 
+          // w_factor_delta is fine (unless we go negative)
           // w_factor is too large 
-          let new_w_factor = w_factor - w_factor_delta; 
+          let new_w_factor_delta = w_factor_delta; 
+          while (w_factor - new_w_factor_delta < 0) {
+            new_w_factor_delta /= 2; 
+          }
           dispatch({ 
             type: "resize", 
             width_paths,
-            w_factor: new_w_factor, 
+            w_factor: w_factor - new_w_factor_delta, 
+            w_factor_delta: new_w_factor_delta,
             w
           }); 
         }
