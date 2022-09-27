@@ -79,7 +79,7 @@ const getInitialState = (spec: Object) => ({
     w_target: 600, // 500 is problematic 
     w_tol: 10,
     w_factor: 1, 
-    w_factor_delta: .15, 
+    w_factor_delta: .5, 
     w_last: -1, 
     resize_counter: 0, 
 })
@@ -95,7 +95,7 @@ type Action =
   | { type: "update-width", w: number };
 
 
-const MAX_ITERATION_LIMIT = 100; 
+const MAX_ITERATION_LIMIT = 50; 
 
 
 function reducer(state: State, action: Action): State {
@@ -103,20 +103,26 @@ function reducer(state: State, action: Action): State {
     switch (action.type) {
       case "update-width": 
         return {...state, resize_counter: 0, w_last: action.w}; 
-      case "resize": 
-        let msg = `Width of ${action.w} is ${state.w_factor < action.w_factor ? "too small" : "too large"}`; 
-        msg += ` / w_factor: ${state.w_factor} -> ${action.w_factor}`; 
-        if (action.w_factor_delta) {
-          msg += ` / w_factor_delta: ${state.w_factor_delta} -> ${action.w_factor_delta}`; 
-        }
-        console.log(msg); 
-        if (action.w_factor < 0) {
+      case "resize":  
+        const w_factor = action.w_factor; 
+        const w_factor_delta = get(action, "w_factor_delta", state.w_factor_delta); 
+        if (w_factor < 0) {
           throw new Error("w_factor cannot be negative."); 
+        } else if (w_factor_delta < 0) {
+          throw new Error("w_factor_delta cannot be negative."); 
         } else if (state.resize_counter > MAX_ITERATION_LIMIT) {
           throw new Error(
             `Resizing algorithm exceeded max iteration limit of ${MAX_ITERATION_LIMIT}.`
           );
         }
+        console.log(
+          `Width of ${action.w} is ${state.w_factor < w_factor ? "too small" : "too large"}` + 
+          ` / w_factor: ${state.w_factor} -> ${w_factor}` + 
+          ` / w_factor_delta: ${state.w_factor_delta}` + (
+            state.w_factor_delta !== w_factor_delta ? ` -> ${w_factor_delta}` : ''
+          ) + 
+          ` / iteration: ${state.resize_counter}`
+        );
         return {
           ...state, 
           vega_lite_spec: apply_w_factor(
@@ -127,8 +133,8 @@ function reducer(state: State, action: Action): State {
               action.width_paths, 
               action.w_factor,
           ),
-          w_factor: action.w_factor, 
-          w_factor_delta: get(action, "w_factor_delta", state.w_factor_delta), 
+          w_factor, 
+          w_factor_delta, 
           w_last: action.w, 
           resize_counter: state.resize_counter + 1 
         };
@@ -150,7 +156,7 @@ const VegaLiteChart: React.FC<{
     const rendered = w !== 0; 
     const too_small = rendered && w < w_target - w_tol; 
     const too_large = rendered && w > w_target + w_tol;
-    if (spec && rendered) {
+    if (w_last !== w && spec && rendered) {
       if (too_small) {
         // Need to increase size of chart 
         if ((w_last > w_target + w_tol) && w_last > w) {
@@ -209,10 +215,6 @@ const VegaLiteChart: React.FC<{
             w
           }); 
         }
-      } else {
-        if (w_last !== w) {
-          dispatch({ type: "update-width", w });
-        }
       }
     } else {
       if (w_last !== w) {
@@ -221,8 +223,14 @@ const VegaLiteChart: React.FC<{
     }
   });
 
-  return <div ref={ref_wrapper}>
-    <VegaLite spec={vega_lite_spec} height={height}></VegaLite>
+  return <div ref={ref_wrapper} className="relative">
+    <div className="relative"></div>
+    <VegaLite 
+    className="relative" 
+    spec={vega_lite_spec} 
+    height={height}
+    onResize={() => console.log("resizing")}
+    ></VegaLite>
   </div>
 }; 
 

@@ -28,11 +28,11 @@ const Home: NextPage = () => {
             <Chart name="FertilizerBreakdown" />
           </Module>
         </div>
-        <div className="col-span-6">
+        {/* <div className="col-span-6">
           <Module>
             <Chart name="FieldOverview" />
           </Module>
-        </div>
+        </div> */}
         {/* <div className="col-span-6">
           <Module>
             <Chart name="noexist" />
