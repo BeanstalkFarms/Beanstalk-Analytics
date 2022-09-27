@@ -17,8 +17,8 @@ const Home: NextPage = () => {
           <Module>
             <Chart name="BeanstalkCreditworthiness" />
           </Module>
-        </div>
-        <div className="col-span-6">
+        </div> */}
+        {/* <div className="col-span-6">
           <Module>
             <Chart name="FarmersMarketHistory" />
           </Module>
