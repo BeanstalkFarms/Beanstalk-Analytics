@@ -2,19 +2,14 @@
 
 Priorities are assigned low (1) to high (5)
 
-Any priority 3 or greater should be completed before v1 launch. 
+Any priority **3** or greater should be completed before v1 launch. 
 
 ## Frontend
 
-- **(4)** Figure out approach to sizing and organizing charts. 
-- **(4)** Implement page based routing into the application. 
-- **(3)** Integrate the following pieces of information (already available) into the chart component. 
-  Not sure how I want to visualize these, maybe expose them through a tooltip or indicator of 
-  some kind. 
-  - status (refreshed, cached). 
-  - run time (amount of time notebook that created schema took to run). 
-  - timestamp (when the schema was created)
-- **(3)** Support for toggling between different subgraphs. Similar to how we do things in the frontend.
+- **(5)** Fix bugs related to dynamic resizing in `VegaLiteChart` component. 
+- **(4)** Modify frontend so that we organize existing set of charts into pages. 
+  - Also implement header based navigation so user can switch between pages easily. 
+- **(2)** Support for toggling between different subgraphs. Similar to how we do things in the frontend.
 
 ## Serverless API 
 
@@ -28,17 +23,22 @@ Any priority 3 or greater should be completed before v1 launch.
 
 ## Infrastructure 
 
+- **(3)** Switch from infra on my personal GCP account to infra using the BF GCP account. 
+  - Deploy both prod and testing infra. 
+- **(3)** Review of IAM policies and infra permissions to ensure things are secure.
 - **(1)** Tear down the load balancer and CDN in my personal gcloud account that were setup for testing. 
-- **(2)** Review of IAM policies and infra permissions to ensure things are secure.
-  - Low priority for now but high priorty pre-launch 
 
 ## Devops 
 
-- **(2)** Run end to end tests of all makefile commands before v1 launch. 
-
+- **(3)** Run end to end tests of all makefile commands before v1 launch. 
+- **(3)** Fix unit / integration tests to reflect new output object structures 
+  (inclusion of width paths and other metadata changed this slightly).
+  
 ## Documentation 
 
+- **(3)** Full documentation review for correctness. 
 - **(3)** Update the notion document that serves as the roadmap for charts on the website. TODO: add a link here. 
+- **(1)** Contributor facing documentation.  
 
 ## Others 
 
