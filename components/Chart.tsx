@@ -5,6 +5,7 @@ import { isNumber } from "lodash";
 
 import useInterval from "../hooks/useInterval";
 import VegaLiteChart, { WidthPaths } from "./VegaLiteChart"; 
+import useSize from '@react-hook/size';
 
 
 const RECOMPUTE_SCHEMA_AGE_SECONDS = 1; 
@@ -297,6 +298,8 @@ function reducer(state: ChartState, action: Action): ChartState {
 const Chart : React.FC<{ name: string; height?: number; }> = ({ name, height = 300 }) => {
 
   const [state, dispatch] = useReducer(reducer, initialState); 
+  const ref_header = useRef(null); 
+  const [header_width, header_height] = useSize(ref_header); 
   const { schema, status_chart, user_can_refresh } = state; 
 
   useEffect(() => {
@@ -382,13 +385,14 @@ const Chart : React.FC<{ name: string; height?: number; }> = ({ name, height = 3
       name={name} 
       spec={schema.schema as Object} 
       height={height}
-      width_paths={schema.width_paths}/>
+      width_paths={schema.width_paths}
+      target_width={header_width * .9}/>
     </div>;
   }
 
   return <div>
     {/* Chart Header */}
-    <div className="grid gap-4 grid-cols-2 grid-rows-1">
+    <div ref={ref_header} className="grid gap-4 grid-cols-2 grid-rows-1">
       <div className="p-2"><h4 className="font-bold">{name}</h4></div>
       <div className="flex justify-end">
         <ChartInfoPopover {...state} refreshChart={() => {

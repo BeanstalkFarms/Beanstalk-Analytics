@@ -2,97 +2,76 @@ import React from 'react';
 import useSize from '@react-hook/size';
 import { useEffect, useReducer, useRef } from "react";
 import { VegaLite } from 'react-vega';
-import { get, set, cloneDeep } from "lodash";
+import { get, set, cloneDeep, omit } from "lodash";
 
 export type WidthPaths = Array<{ path: Array<string | number>, factor: number, value: number }>; 
 
 const apply_w_factor = (s: Object, wpaths: WidthPaths, wf: number) => {
   for (let { path, factor, value } of wpaths) {
-    /* 2 examples illustrating how we use factor, value, and wf to determine current width: 
-    ------------------------------------------------------------------------
-    wpaths = [
-      {path: ["width"], factor: 1, value: 100},
-      {path: ["radius"], factor: 2, value: 100},
-    ]
-    schema = {
-      "width": 100,   
-      "radius": 100, 
-    }
-
-    Logically, factor decreases the impact of wf by a multiplicative factor  
-    Both factor and wf are inputs to multiplier 
-    - multiplier = 1 + (wf - 1) / factor 
-
-    ------------------------------------------------------------------------
-    example 1: wf = .9 
-    
-    - width goes from 100 -> 90
-    - radius goes from 100 -> 95 
-      - applying full wf (as is done to "width") decreases width by 10. 
-      - factor tells us to reduce the amount of decrease (10) by a factor of 2 yielding 10 / 2 = 5. 
-
-    compute multiplier for "width"
-    1 + (.9 - 1) / 1 = 1 + -.1 = .9
-
-    compute multiplier for "radius"
-    1 + (.9 - 1) / 2 = 1 + -.1 / 2 = .95
-
-    ------------------------------------------------------------------------
-    example 2: wf = 1.2
-   
-    - width goes from 100 -> 120
-    - radius goes from 100 -> 110 
-      - applying full wf (as is done to "width") increases width by 20. 
-      - factor tells us to reduce the amount of increase (20) by a factor of 2 yielding 20 / 2 = 10. 
-
-    compute multiplier for "width"
-    1 + (1.2 - 1) / 1 = 1 + .2 = 1.2
-
-    compute multiplier for "radius"
-    1 + (1.2 - 1) / 2 = 1 + .2 / 2 = 1.1 
-    */ 
+    // Factor scales the magnitude of changes done by wf 
+    // ex: Factor is 2, impact of wf is twice as small on size increase / decrease. 
     const multiplier = 1 + (wf - 1) / factor; 
     set(s, path, value * multiplier); 
   }
   return s; 
 }; 
 
-type State = {
-  // vega-lite spec 
-  vega_lite_spec: Object 
-  // The target width of the chart 
+const w_tol = 10;
+const w_factor_initial = 1; 
+const w_factor_delta_initial = .5;
+
+type ResizeState = {
+  // The current target width for the resize attempt    
   w_target: number 
-  // The tolerance threshold for getting near w_target 
-  w_tol: number 
-  // multiplicative factor by which we multiply all vega-lite width path values 
+  // Multiplicative factor by which we multiply all vega-lite width path values.
+  // We are attempting to find the value of w_factor that gives us a width close 
+  // enough to w_target to be considered successful. 
   w_factor: number 
-  // additive factor by which we change w_factor when resizing. 
+  // Additive factor by which we change w_factor when resizing. 
   w_factor_delta: number 
-  // the last value of w 
+  // Counter variable for number of iterations spent resizing 
+  counter: number 
+  // The width of the chart on the previous resize iteration. 
   w_last: number 
-  // counter variable for number of iterations spent resizing 
-  resize_counter: number 
+};
+
+type State = {
+  // Vega-lite spec 
+  vega_lite_spec: Object 
+  // State related to chart resizing 
+  resize: ResizeState
 }; 
 
-const getInitialState = (spec: Object) => ({ 
-    vega_lite_spec: cloneDeep(spec),
-    w_target: 600, // 500 is problematic 
-    w_tol: 10,
-    w_factor: 1, 
-    w_factor_delta: .5, 
-    w_last: -1, 
-    resize_counter: 0, 
-})
+const getInitialState = (
+  spec: Object, 
+  width_paths: WidthPaths, 
+  w_target: number,
+): State => ({ 
+    vega_lite_spec: apply_w_factor(
+      cloneDeep(spec), width_paths, w_factor_initial
+    ),
+    resize: {
+      w_target,
+      w_factor: w_factor_initial, 
+      w_factor_delta: w_factor_delta_initial, 
+      w_last: -1, 
+      counter: 0, 
+    }
+}); 
 
 type Action =
   | { 
       type: "resize", 
       width_paths: WidthPaths, 
       w_factor: number, 
-      w_factor_delta?: number, 
+      w_factor_delta: number, 
       w: number, 
     }
-  | { type: "update-width", w: number };
+  | { 
+      type: "trigger-resize", 
+      width_paths: WidthPaths, 
+      w_target: number 
+    };
 
 
 const MAX_ITERATION_LIMIT = 50; 
@@ -101,42 +80,54 @@ const MAX_ITERATION_LIMIT = 50;
 function reducer(state: State, action: Action): State {
 
     switch (action.type) {
-      case "update-width": 
-        return {...state, resize_counter: 0, w_last: action.w}; 
+      case "trigger-resize": 
+        console.log(`Triggering a rezise to ${action.w_target}`);
+        return getInitialState(
+          state.vega_lite_spec, 
+          action.width_paths, 
+          action.w_target, 
+        );
       case "resize":  
         const w_factor = action.w_factor; 
-        const w_factor_delta = get(action, "w_factor_delta", state.w_factor_delta); 
+        const w_factor_delta = get(action, "w_factor_delta", state.resize.w_factor_delta); 
         if (w_factor < 0) {
           throw new Error("w_factor cannot be negative."); 
         } else if (w_factor_delta < 0) {
           throw new Error("w_factor_delta cannot be negative."); 
-        } else if (state.resize_counter > MAX_ITERATION_LIMIT) {
+        } else if (state.resize.counter > MAX_ITERATION_LIMIT) {
           throw new Error(
             `Resizing algorithm exceeded max iteration limit of ${MAX_ITERATION_LIMIT}.`
           );
         }
         console.log(
-          `Width of ${action.w} is ${state.w_factor < w_factor ? "too small" : "too large"}` + 
-          ` / w_factor: ${state.w_factor} -> ${w_factor}` + 
-          ` / w_factor_delta: ${state.w_factor_delta}` + (
-            state.w_factor_delta !== w_factor_delta ? ` -> ${w_factor_delta}` : ''
+          `Last Width: ${state.resize.w_last} Current Width: ${action.w} Target Width: ${state.resize.w_target}\n` + 
+          `Current width ${state.resize.w_factor < w_factor ? "too small" : "too large"}\n` + 
+          `w_factor: ${state.resize.w_factor} -> ${w_factor}\n` + 
+          `w_factor_delta: ${state.resize.w_factor_delta}` + (
+            state.resize.w_factor_delta !== w_factor_delta ? ` -> ${w_factor_delta}\n` : '\n'
           ) + 
-          ` / iteration: ${state.resize_counter}`
+          `iteration: ${state.resize.counter}`
         );
+        const new_spec = apply_w_factor(
+            // TODO: @SiloChad the spec updates aren't working correctly unless I clone the 
+            //      entire object. This probably is terrible for performance so any suggestions on 
+            //      how to make this more efficient. 
+            cloneDeep(state.vega_lite_spec), 
+            action.width_paths, 
+            w_factor,
+        ); 
+        // for (let { path, value } of action.width_paths) {
+        //   console.log(`reducer ${path} ${get(new_spec, path)} ${value}`); 
+        // }
         return {
-          ...state, 
-          vega_lite_spec: apply_w_factor(
-              // TODO: @SiloChad the spec updates aren't working correctly unless I clone the 
-              //      entire object. This probably is terrible for performance so any suggestions on 
-              //      how to make this more efficient. 
-              cloneDeep({...state.vega_lite_spec}), 
-              action.width_paths, 
-              action.w_factor,
-          ),
-          w_factor, 
-          w_factor_delta, 
-          w_last: action.w, 
-          resize_counter: state.resize_counter + 1 
+          vega_lite_spec: new_spec, 
+          resize: {
+            w_target: state.resize.w_target, 
+            w_factor, 
+            w_factor_delta, 
+            counter: state.resize.counter + 1, 
+            w_last: action.w, 
+          }
         };
       default:
         throw new Error("Invalid action");
@@ -144,94 +135,78 @@ function reducer(state: State, action: Action): State {
 }
 
 const VegaLiteChart: React.FC<{ 
-  name: string, spec: Object, width_paths: WidthPaths, height: number 
-}> = ({ name, spec, width_paths, height }) => {
+  name: string, 
+  spec: Object, 
+  width_paths: WidthPaths, 
+  height: number, 
+  target_width: number, 
+}> = ({ name, spec, width_paths, height, target_width }) => {
 
+  const spec_no_data = cloneDeep(omit(spec, 'datasets')); 
+  // @ts-ignore
+  const data = spec['datasets'];
+  
   const ref_wrapper = useRef<HTMLDivElement>(null); 
-  const [state, dispatch] = useReducer(reducer, getInitialState(spec)); 
   const [w, h] = useSize(ref_wrapper);
-  const { vega_lite_spec, w_factor, w_factor_delta, w_last, w_target, w_tol } = state; 
+  const [state, dispatch] = useReducer(reducer, getInitialState(spec_no_data, width_paths, target_width)); 
+  const { vega_lite_spec, resize } = state; 
+  const { w_target, w_factor, w_factor_delta, w_last } = resize; 
 
   useEffect(() => {
-    const rendered = w !== 0; 
-    const too_small = rendered && w < w_target - w_tol; 
-    const too_large = rendered && w > w_target + w_tol;
-    if (w_last !== w && spec && rendered) {
+    // for (let { path, value } of width_paths) {
+    //   console.log(`effect ${path} ${get(vega_lite_spec, path)} ${value}`); 
+    // }
+    // console.log(vega_lite_spec)
+    const is_parent_rendered = w_target > 0; 
+    const is_self_rendered = w > 0; 
+    const width_stable = w_last == w; // don't resize when this is true 
+    const ready = spec && is_parent_rendered && is_self_rendered; 
+    const too_small = ready && w < (w_target - w_tol); 
+    const too_large = ready && w > (w_target + w_tol);
+    console.log(ready, too_small, too_large, width_stable);
+    if (ready && target_width !== w_target) {
+      dispatch({type: "trigger-resize", width_paths, w_target: target_width});  
+    } 
+    else if ((too_small || too_large) && (!width_stable)) {
+      let sign; 
+      let new_w_factor_delta
       if (too_small) {
         // Need to increase size of chart 
-        if ((w_last > w_target + w_tol) && w_last > w) {
-          // On last iteration, chart was too large, then we overshot optimal range.
-          // w_factor_delta is too large 
-          // w_factor is too small 
-          let new_w_factor_delta = w_factor_delta / 2; 
-          dispatch({ 
-            type: "resize", 
-            width_paths,
-            w_factor: w_factor + new_w_factor_delta, 
-            w_factor_delta: new_w_factor_delta, 
-            w
-          }); 
-        } else {
-          // We did not overshoot the optimal range, and are still below it 
-          // w_factor_delta is fine 
-          // w_factor is too small 
-          dispatch({ 
-            type: "resize", 
-            width_paths,
-            w_factor: w_factor + w_factor_delta, 
-            w
-          }); 
-        }
-      } else if (too_large) {
+        let did_overshoot = w_last > (w_target + w_tol);
+        // If we are too small on current iteration but were too large on prior iteration, 
+        // then we overshot the optimal width range. Thus, we decrease w_factor_delta to 
+        // minimize the chances of overshooting the optimal range again. 
+        new_w_factor_delta = did_overshoot ? w_factor_delta / 2 : w_factor_delta; 
+        sign = 1; 
+      } else {
         // Need to decrease size of chart 
-        if ((w_last < w_target - w_tol) && w_last < w) {
-          // On last iteration, chart was too small, then we overshot optimal range.
-          // w_factor_delta is too large 
-          // w_factor is too large 
-          let new_w_factor_delta = w_factor_delta / 2; 
-          while (w_factor - new_w_factor_delta < 0) {
-            new_w_factor_delta /= 2; 
-          }
-          dispatch({ 
-            type: "resize", 
-            width_paths,
-            w_factor: w_factor - new_w_factor_delta, 
-            w_factor_delta: new_w_factor_delta, 
-            w
-          }); 
-        } else {
-          // We did not overshoot the optimal range, and are still above it 
-          // w_factor_delta is fine (unless we go negative)
-          // w_factor is too large 
-          let new_w_factor_delta = w_factor_delta; 
-          while (w_factor - new_w_factor_delta < 0) {
-            new_w_factor_delta /= 2; 
-          }
-          dispatch({ 
-            type: "resize", 
-            width_paths,
-            w_factor: w_factor - new_w_factor_delta, 
-            w_factor_delta: new_w_factor_delta,
-            w
-          }); 
+        let did_overshoot = w_last < (w_target - w_tol);
+        // If we are too large on current iteration but were too small on prior iteration, 
+        // then we overshot the optimal width range. Thus, we decrease w_factor_delta to 
+        // minimize the chances of overshooting the optimal range again. 
+        new_w_factor_delta = did_overshoot ? w_factor_delta / 2 : w_factor_delta; 
+        // It's possible that if we use the above value of new_w_factor_delta, then we 
+        // might cause w_factor to be negative. We eliminate this possibility by doing the following. 
+        while (w_factor - new_w_factor_delta <= 0) {
+          new_w_factor_delta /= 2; 
         }
+        sign = -1; 
       }
-    } else {
-      if (w_last !== w) {
-        dispatch({ type: "update-width", w });
-      }
-    }
+      dispatch({ 
+        type: "resize", 
+        width_paths,
+        w_factor: w_factor + sign * new_w_factor_delta, 
+        w_factor_delta: new_w_factor_delta, 
+        w
+      }); 
+    } 
   });
 
   return <div ref={ref_wrapper} className="relative">
-    <div className="relative"></div>
-    <VegaLite 
-    className="relative" 
-    spec={vega_lite_spec} 
-    height={height}
-    onResize={() => console.log("resizing")}
-    ></VegaLite>
-  </div>
+    <VegaLite spec={vega_lite_spec} data={data} height={height}></VegaLite>
+    <div className="absolute top-0 left-0 w-full h-full bg-slate-300 opacity-50"></div>
+  </div>;
+
 }; 
 
 export default VegaLiteChart; 
