@@ -18,6 +18,9 @@ const apply_w_factor = (s: Object, wpaths: WidthPaths, wf: number) => {
 }; 
 
 const w_tol = 10;
+const is_too_small = (w: number, w_target: number) => w < (w_target - w_tol); 
+const is_too_large = (w: number, w_target: number) => w > (w_target + w_tol);
+
 const w_factor_initial = 1; 
 const w_factor_delta_initial = .5;
 
@@ -77,8 +80,8 @@ function reducer(state: State, action: Action): State {
         };
       case "resize":  
         // If we need to resize, compute new values for wf and wf_delta 
-        const too_small = action.w < (w_target - w_tol); 
-        const too_large = action.w > (w_target + w_tol);
+        const too_small = is_too_small(action.w, w_target); 
+        const too_large = is_too_large(action.w, w_target); 
         let new_wf_delta; 
         let new_wf; 
         // I just love how I literally have no idea what I'm doing but this just works 
@@ -176,19 +179,13 @@ const VegaLiteChart: React.FC<{
   }, [w, width_paths, w_target, resize_toggle]);
 
   useInterval(() => {
-    const too_small = w < (w_target - w_tol); 
-    const too_large = w > (w_target + w_tol);
-    const ts = Date.now()
-    // console.log(too_small, too_large, (ts - epoch) >= 500, ts, epoch, ts - epoch, )
-    if ((ts - epoch) >= 500 && (too_small || too_large)) {
+    if ((Date.now() - epoch) >= 500 && (is_too_small(w, w_target) || is_too_large(w, w_target))) {
       set_resize_toggle(!resize_toggle);
     }
   }, 500); 
 
   const is_resizing = !(
-    target_width === w_target && 
-    w >= (w_target - w_tol) &&
-    w <= (w_target + w_tol)
+    target_width === w_target && !is_too_small(w, w_target) && !is_too_large(w, w_target)
   );
 
   return <div ref={ref_wrapper} className="relative">
