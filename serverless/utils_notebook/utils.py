@@ -1,16 +1,10 @@
 import os 
-import json
 from typing import Tuple, Dict 
 
-from dotenv import load_dotenv
 from subgrounds.subgrounds import Subgrounds, Subgraph
 from pandas import DataFrame
 from IPython.display import display 
 from IPython.core.display import HTML
-
-# TODO: Figure out a solution here 
-load_dotenv("../../.env")
-SUBGRAPH_URL = os.environ['SUBGRAPH_URL']
 
 
 def is_number(v): 
@@ -66,7 +60,7 @@ def load_subgraph(subgraph_host=None, subgraph_type=None) -> Tuple[Subgrounds, S
     TODO: arg to select from different subgraph url's
     """
     sg = Subgrounds()
-    bs: Subgraph = sg.load_subgraph(SUBGRAPH_URL)
+    bs: Subgraph = sg.load_subgraph(os.environ['SUBGRAPH_URL'])
     return sg, bs 
 
 
