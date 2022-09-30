@@ -65,13 +65,13 @@ def handler_charts_refresh(request) -> Tuple[any, int]:
             compute_schema = force_refresh or not exists or age_seconds >= MAX_AGE_SECONDS
             if compute_schema:
                 status = "recomputed"
-                schema = nbr.execute(schema_name)
-                width_paths = compute_width_paths(schema)
+                ntbk_output = nbr.execute(schema_name)
                 data = {
                     "timestamp": cur_dtime.isoformat(), 
                     "run_time_seconds": nbr.execute._decorated_run_time_seconds,
-                    "schema": schema,
-                    "width_paths": width_paths, 
+                    "spec": ntbk_output['spec'],
+                    "width_paths": ntbk_output['width_paths'],
+                    "css": ntbk_output['css'],
                 }
                 sc.upload(blob, json.dumps(data))
             else: 

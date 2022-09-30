@@ -1,6 +1,8 @@
 import json
+from typing import Optional 
+
 import altair as alt 
-from IPython.display import JSON
+from IPython.display import JSON, display, HTML 
 from deepdiff import DeepSearch
 from deepdiff.path import _path_to_elements
 
@@ -13,8 +15,14 @@ def condition_union(op_compare, op_join, values):
     expr = f" {op_join} ".join([f"datum.variable {op_compare} '{v}'" for v in values])
     return expr 
 
-def output_chart(c: alt.Chart): 
-    return JSON(json.loads(c.to_json()))
+
+def apply_css(css): 
+    """Applies css stylesheet to current cell output.
+    
+    Must be called prior to outputting display object in notebook cell. 
+    Useful for applying custom styles to vega-lite charts.  
+    """
+    display(HTML(f"<style>{css}</style>"))
     
 
 def compute_width_paths(schema: dict): 
@@ -121,3 +129,16 @@ def compute_width_paths(schema: dict):
         wpaths.append({"path": wpath[1:], "factor": 3.33, "value": wpath_value})
 
     return wpaths 
+
+
+def output_chart(c: alt.Chart, css: Optional[str] = None): 
+    """Applies css stylesheet to current cell output.
+    
+    Can be used prior to displaying vega-lite charts for custom styling. 
+    """
+    spec = json.loads(c.to_json())
+    return JSON({
+        "spec": spec, 
+        "width_paths": compute_width_paths(spec),
+        "css": css, 
+    })

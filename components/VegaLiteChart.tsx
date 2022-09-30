@@ -148,7 +148,8 @@ const VegaLiteChart: React.FC<{
   width_paths: WidthPaths, 
   height: number, 
   target_width: number, 
-}> = ({ name, spec, width_paths, height, target_width }) => {
+  css: string | null, 
+}> = ({ name, spec, width_paths, height, target_width, css }) => {
 
   const spec_no_data = cloneDeep(omit(spec, 'datasets')); 
   // @ts-ignore
@@ -189,8 +190,9 @@ const VegaLiteChart: React.FC<{
   );
 
   return <div ref={ref_wrapper} className="relative">
+    {css ? <style>{css}</style> : null} 
     <VegaLite spec={cloneDeep(vega_lite_spec)} data={data} height={height}></VegaLite>
-    <div className={`absolute top-0 left-0 w-full h-full ${is_resizing ? 'bg-red-300' : 'bg-slate-300'} opacity-50`}></div>
+    {/* <div className={`absolute top-0 left-0 w-full h-full ${is_resizing ? 'bg-red-300' : 'bg-slate-300'} opacity-50`}></div> */}
   </div>;
 
 }; 

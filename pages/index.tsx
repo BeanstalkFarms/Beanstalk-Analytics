@@ -13,21 +13,21 @@ const Home: NextPage = () => {
   return (
     <Page>
       <div className="block md:grid md:grid-cols-6 gap-4 m-4">
-        {/* <div className="col-span-6">
+        <div className="col-span-6">
           <Module>
             <Chart name="BeanstalkCreditworthiness" />
           </Module>
-        </div> */}
+        </div>
         {/* <div className="col-span-6">
           <Module>
             <Chart name="FarmersMarketHistory" />
           </Module>
         </div> */}
-        <div className="col-span-6">
+        {/* <div className="col-span-6">
           <Module>
             <Chart name="FertilizerBreakdown" />
           </Module>
-        </div>
+        </div> */}
         {/* <div className="col-span-6">
           <Module>
             <Chart name="FieldOverview" />

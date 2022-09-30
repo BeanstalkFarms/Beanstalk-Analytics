@@ -8,33 +8,37 @@ import VegaLiteChart, { WidthPaths } from "./VegaLiteChart";
 import useSize from '@react-hook/size';
 
 
-const RECOMPUTE_SCHEMA_AGE_SECONDS = 1; 
-const SCHEMA_MAX_AGE_MINUTES = 15; 
+const RECOMPUTE_SPEC_AGE_SECONDS = 1; 
+const SPEC_MAX_AGE_MINUTES = 15; 
 const ARTIFICIAL_DELAY = false; 
 
 const urlBucket = new URL(`${process.env.NEXT_PUBLIC_CDN}/${process.env.NEXT_PUBLIC_STORAGE_BUCKET_NAME}`);
 const urlApi = new URL(`${process.env.NEXT_PUBLIC_API_URL}`); 
 
 const urlBucketName = (name: string) => (
+  // TODO: change this path to spec 
   new URL(`${urlBucket}/schemas/${name.toLowerCase()}.json?${Date.now()}`)
 );
 const urlApiName = (name: string) => (
+  // TODO: change this path to spec 
   new URL(`${urlApi}schemas/refresh?data=${name.toLowerCase()}&${Date.now()}`)
 );
 
-type Schema = {
-  // Name of the vega-lite schema. This is the identifier we use to request the schema from the server. 
+type Spec = {
+  // Name of the vega-lite spec. This is the identifier we use to request the spec from the server. 
   name: string 
-  // Vega-lite schema object. null if we have not loaded in a schema from the server 
-  schema: Object
-  // The timestamp at which the schema was created. null if schema is null. 
-  timestamp: SchemaTimestamp
-  // The age of this schema in minutes, recomputed each RECOMPUTE_SCHEMA_AGE_SECONDS seconds via a hook. 
+  // Vega-lite spec object. null if we have not loaded in a spec from the server 
+  spec: Object
+  // The timestamp at which the spec was created. null if spec is null. 
+  timestamp: SpecTimestamp
+  // The age of this spec in minutes, recomputed each RECOMPUTE_SPEC_AGE_SECONDS seconds via a hook. 
   age_minutes: number
-  // The amount of time in seconds that it took the server to internally generate this schema object 
+  // The amount of time in seconds that it took the server to internally generate this spec object 
   query_runtime_secs: number
   // The paths into the spec that must be modified for changing width dynamically 
   width_paths: WidthPaths
+  // Custom stylesheet for rendered spec 
+  css: string | null 
 }
 
 // Represents the most recent status of an api call 
@@ -45,20 +49,20 @@ type Schema = {
 type EndpointStatus = "pending" | "success" | "failure" | null; 
 
 type ChartState = {
-  // The schema object backing the chart. 
-  schema: Schema | null 
+  // The spec object backing the chart. 
+  spec: Spec | null 
   // Chart status 
-  /*- "pre-loading": We are about to attempt to refresh and retrieve a new copy of schema. 
-    - "loading": We are in the process of refresing and retrieving a new copy of schema. 
+  /*- "pre-loading": We are about to attempt to refresh and retrieve a new copy of spec. 
+    - "loading": We are in the process of refresing and retrieving a new copy of spec. 
     - "stable": We are not actively preparing to make api calls or making api calls. 
   */
   status_chart: "pre-loading" | "loading" | "stable"
-  // Status for most recent attempt to refresh schema.
+  // Status for most recent attempt to refresh spec.
   status_refresh_endpoint: EndpointStatus
-  // Status for most recent attempt to load schema.
+  // Status for most recent attempt to load spec.
   status_storage_endpoint: EndpointStatus
-  // Flag indicator for whether or not user can attempt to refresh schema. 
-  // True when (chart stable && ((schema exists and is refreshable) || schema does not exist))
+  // Flag indicator for whether or not user can attempt to refresh spec. 
+  // True when (chart stable && ((spec exists and is refreshable) || spec does not exist))
   // Always false when status_chart !== "stable"
   user_can_refresh: boolean 
 }; 
@@ -69,7 +73,7 @@ interface ChartInfoPopoverProps extends PropsWithChildren, ChartState {
 
 interface ChartStatusBoxProps extends ChartState {}; 
 
-class SchemaTimestamp {
+class SpecTimestamp {
 
   iso_timestamp: string;
   date: Date; 
@@ -91,16 +95,16 @@ class SchemaTimestamp {
 
 };
 
-function is_past_age_threshold(timestamp: SchemaTimestamp) {
-  return timestamp.get_age_minutes() > SCHEMA_MAX_AGE_MINUTES
+function is_past_age_threshold(timestamp: SpecTimestamp) {
+  return timestamp.get_age_minutes() > SPEC_MAX_AGE_MINUTES
 }
 
 const ChartInfoPopover: React.FC<ChartInfoPopoverProps> = ({
-  children, schema, status_storage_endpoint, user_can_refresh, status_refresh_endpoint, refreshChart
+  children, spec, status_storage_endpoint, user_can_refresh, status_refresh_endpoint, refreshChart
 }) => {
   // props.children are the elements we want to serve as the "button" that opens the model. 
   // This group of elements will have a click listener attached by this component. 
-  const { age_minutes, query_runtime_secs } = schema || {}; 
+  const { age_minutes, query_runtime_secs } = spec || {}; 
   const buttonRef = useRef(null); 
 
   // Compute text values for populating tooltip body 
@@ -190,7 +194,7 @@ const ChartInfoPopover: React.FC<ChartInfoPopoverProps> = ({
 }
 
 const ChartStatusBox: React.FC<ChartStatusBoxProps> = ({
-  schema, status_storage_endpoint, user_can_refresh, status_chart
+  spec, status_storage_endpoint, user_can_refresh, status_chart
 }) => {
 
   let pingAnimation = false; 
@@ -198,29 +202,29 @@ const ChartStatusBox: React.FC<ChartStatusBoxProps> = ({
   let statusString; 
   let statusIndicatorColorClass; 
   if (status_chart !== "stable") {
-    // We are loading a new schema 
+    // We are loading a new spec 
     pingAnimation = true; 
     statusString = "loading"; 
     statusIndicatorColorClass = "bg-blue-500"; 
-  } else if (status_storage_endpoint === "failure" && schema) {
-    // Chart is stable. Couldn't load new schema but old schema exists.
+  } else if (status_storage_endpoint === "failure" && spec) {
+    // Chart is stable. Couldn't load new spec but old spec exists.
     statusString = "failed to refresh"; 
     statusIndicatorColorClass = "bg-orange-500"; 
-  } else if (status_storage_endpoint === "failure" && !schema) {
-    // Chart is stable. Couldn't load new schema and no old schema exists. 
+  } else if (status_storage_endpoint === "failure" && !spec) {
+    // Chart is stable. Couldn't load new spec and no old spec exists. 
     statusString = "failed"; 
     statusIndicatorColorClass = "bg-red-500"; 
-  } else if (schema && !user_can_refresh) {
-    // Chart is stable. Schema is present and non-refreshable
+  } else if (spec && !user_can_refresh) {
+    // Chart is stable. Spec is present and non-refreshable
     statusString = "up to date"; 
     statusIndicatorColorClass = "bg-green-500"; 
-  } else if (schema && user_can_refresh) {
-    // Chart is stable. Schema is present and refreshable
+  } else if (spec && user_can_refresh) {
+    // Chart is stable. Spec is present and refreshable
     statusString = "refreshable"; 
     statusIndicatorColorClass = "bg-yellow-500"; 
   } else {
     throw new Error(`Invalid state. 
-    schema: ${schema ? 'exists' : 'null'}
+    spec: ${spec ? 'exists' : 'null'}
     user_can_refresh: ${user_can_refresh}
     status_storage_endpoint: ${status_storage_endpoint}
     status_chart: ${status_chart}`); 
@@ -242,12 +246,12 @@ const ChartStatusBox: React.FC<ChartStatusBoxProps> = ({
 
 function reducerAfterware(state: ChartState) {
   // Run after all reducer actions. 
-  // If schema exists, we update it's age. 
+  // If spec exists, we update it's age. 
   // Update user_can_refresh. 
-  if (state.schema) {
-    state.schema.age_minutes = state.schema.timestamp.get_age_minutes(); 
+  if (state.spec) {
+    state.spec.age_minutes = state.spec.timestamp.get_age_minutes(); 
     state.user_can_refresh = (
-      state.status_chart === "stable" && is_past_age_threshold(state.schema.timestamp)
+      state.status_chart === "stable" && is_past_age_threshold(state.spec.timestamp)
     ); 
   } else {
     state.user_can_refresh = state.status_chart === "stable"; 
@@ -256,7 +260,7 @@ function reducerAfterware(state: ChartState) {
 }
 
 const initialState: ChartState = {
-  schema: null, 
+  spec: null, 
   status_chart: "pre-loading", 
   status_refresh_endpoint: null, 
   status_storage_endpoint: null, 
@@ -268,14 +272,14 @@ type Action =
  | { type: "start-loading" }
  | { type: "replace-state", chart_state: ChartState }
  | { type: "toggle-user-can-refresh" }
- | { type: "update-schema-age" };
+ | { type: "update-spec-age" };
 
 
 function reducer(state: ChartState, action: Action): ChartState {
   switch (action.type) {
     case "start-loading": 
       return reducerAfterware({
-        schema: state.schema,
+        spec: state.spec,
         status_chart: "loading", 
         status_refresh_endpoint: "pending", 
         status_storage_endpoint: "pending", 
@@ -283,9 +287,9 @@ function reducer(state: ChartState, action: Action): ChartState {
       })
     case "replace-state":
       return reducerAfterware(action.chart_state);
-    case "update-schema-age": 
-      if (!state.schema) {
-        throw new Error("Schema must exist for action update-schema-age");
+    case "update-spec-age": 
+      if (!state.spec) {
+        throw new Error("Spec must exist for action update-spec-age");
       }
       return reducerAfterware({...state}); 
     case "toggle-user-can-refresh": 
@@ -300,7 +304,7 @@ const Chart : React.FC<{ name: string; height?: number; }> = ({ name, height = 3
   const [state, dispatch] = useReducer(reducer, initialState); 
   const ref_header = useRef(null); 
   const [header_width, header_height] = useSize(ref_header); 
-  const { schema, status_chart, user_can_refresh } = state; 
+  const { spec, status_chart, user_can_refresh } = state; 
 
   useEffect(() => {
     if (status_chart === 'pre-loading') {
@@ -314,7 +318,7 @@ const Chart : React.FC<{ name: string; height?: number; }> = ({ name, height = 3
         }
         // Including the Authorization header forces the requests to do CORS preflight 
         const headers = {"Authorization": "Bearer dummy_force_cors_preflight"}
-        let new_schema: Schema | null; 
+        let new_spec: Spec | null; 
         let new_status_refresh_endpoint: EndpointStatus;
         let new_status_storage_endpoint: EndpointStatus; 
         // 1. Make a call to the refresh endpoint 
@@ -335,25 +339,26 @@ const Chart : React.FC<{ name: string; height?: number; }> = ({ name, height = 3
           const res = await fetch(urlBucketName(name).toString(), {"headers": headers })
             .then(r => r.json()); 
           new_status_storage_endpoint = "success"; 
-          const schema_timestamp = new SchemaTimestamp(res.timestamp); 
-          new_schema = {
+          const spec_timestamp = new SpecTimestamp(res.timestamp); 
+          new_spec = {
             name, 
-            schema: res.schema, 
-            timestamp: schema_timestamp, 
+            spec: res.spec, 
+            timestamp: spec_timestamp, 
             query_runtime_secs: parseFloat(res.run_time_seconds),
-            age_minutes: schema_timestamp.get_age_minutes(), 
-            width_paths: res.width_paths
+            age_minutes: spec_timestamp.get_age_minutes(), 
+            width_paths: res.width_paths, 
+            css: res.css, 
           }
         } catch (e) {
           console.error(e);
           new_status_storage_endpoint = "failure"; 
-          new_schema = schema;
+          new_spec = spec;
         }
         // Update state 
         dispatch({ 
           type: "replace-state",  
           chart_state: { 
-            schema: new_schema, 
+            spec: new_spec, 
             status_chart: "stable", 
             status_refresh_endpoint: new_status_refresh_endpoint, 
             status_storage_endpoint: new_status_storage_endpoint, 
@@ -362,30 +367,31 @@ const Chart : React.FC<{ name: string; height?: number; }> = ({ name, height = 3
         })
       })();
     }
-  }, [schema, status_chart, name]);
+  }, [spec, status_chart, name]);
 
   useInterval(() => {
-    // Update schema age every RECOMPUTE_SCHEMA_AGE_SECONDS seconds when schema exists 
+    // Update spec age every RECOMPUTE_SPEC_AGE_SECONDS seconds when spec exists 
     // TODO: @Silo Chad, right now, I'm updating the chart age and refreshability every second 
     //      for all charts do you see any potential performance concerns here? 
-    if (schema) dispatch({type: "update-schema-age"}); 
-  }, RECOMPUTE_SCHEMA_AGE_SECONDS * 1000);
+    if (spec) dispatch({type: "update-spec-age"}); 
+  }, RECOMPUTE_SPEC_AGE_SECONDS * 1000);
 
   // Determine the chart body 
   let chartBody; 
-  if (!schema) {
+  if (!spec) {
     const bodyText = ["pre-loading", "loading"].includes(status_chart) ? "Loading..." : "Error"; 
     chartBody = <div className="flex items-center justify-center" style={{ height }}>
       {bodyText}
     </div>;
   } else {
-    // Regardless of chart state, if the schema exists, we show the chart.
+    // Regardless of chart state, if the spec exists, we show the chart.
     chartBody = <div className="flex items-center justify-center">
       <VegaLiteChart 
       name={name} 
-      spec={schema.schema as Object} 
+      spec={spec.spec as Object} 
+      css={spec.css}
       height={height}
-      width_paths={schema.width_paths}
+      width_paths={spec.width_paths}
       target_width={header_width * .9}/>
     </div>;
   }
