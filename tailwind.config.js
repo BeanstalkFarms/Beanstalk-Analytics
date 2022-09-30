@@ -13,10 +13,12 @@ module.exports = {
       red: colors.red, 
       yellow: colors.yellow, 
       green: colors.green, 
+      emerald: colors.emerald, 
       slate: colors.slate,
       blue: colors.blue, 
       gray: colors.gray, 
       orange: colors.orange, 
+      white: colors.white, 
     },
   },
   plugins: [

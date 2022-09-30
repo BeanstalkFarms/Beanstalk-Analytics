@@ -6,7 +6,6 @@ Any priority **3** or greater should be completed before v1 launch.
 
 ## Frontend
 
-- **(5)** Fix bugs related to dynamic resizing in `VegaLiteChart` component. 
 - **(4)** Modify frontend so that we organize existing set of charts into pages. 
   - Also implement header based navigation so user can switch between pages easily. 
 - **(2)** Support for toggling between different subgraphs. Similar to how we do things in the frontend.

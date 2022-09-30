@@ -142,14 +142,20 @@ function reducer(state: State, action: Action): State {
     }
 }
 
-const VegaLiteChart: React.FC<{ 
+interface VegaLiteChartProps {
   name: string, 
   spec: Object, 
   width_paths: WidthPaths, 
   height: number, 
   target_width: number, 
   css: string | null, 
-}> = ({ name, spec, width_paths, height, target_width, css }) => {
+  className: string | undefined, 
+  setResizing: (new_is_resizing: boolean) => void 
+}; 
+
+const VegaLiteChart: React.FC<VegaLiteChartProps> = ({ 
+  name, spec, width_paths, height, target_width, css, setResizing, className
+}) => {
 
   const spec_no_data = cloneDeep(omit(spec, 'datasets')); 
   // @ts-ignore
@@ -185,14 +191,27 @@ const VegaLiteChart: React.FC<{
     }
   }, 500); 
 
+  useLayoutEffect(() => {
+    const is_resizing = !(
+      target_width === w_target && !is_too_small(w, w_target) && !is_too_large(w, w_target)
+    );
+    setResizing(is_resizing); 
+  }, [w, target_width, w_target]); 
+
   const is_resizing = !(
     target_width === w_target && !is_too_small(w, w_target) && !is_too_large(w, w_target)
   );
 
+  // Set to true to see effects of dynamic resizing. Only for debugging issues. 
+  const debug_resizing = false; 
+
+  // Z-index of 1001 required to hide action button 
   return <div ref={ref_wrapper} className="relative">
     {css ? <style>{css}</style> : null} 
-    <VegaLite spec={cloneDeep(vega_lite_spec)} data={data} height={height}></VegaLite>
-    {/* <div className={`absolute top-0 left-0 w-full h-full ${is_resizing ? 'bg-red-300' : 'bg-slate-300'} opacity-50`}></div> */}
+    <VegaLite spec={cloneDeep(vega_lite_spec)} data={data} height={height} className={className}></VegaLite>
+    {!is_resizing ? null : <div className={`
+    absolute top-0 left-0 w-full h-full ${debug_resizing ? 'bg-red-500' : 'bg-white'} 
+    flex items-center justify-center z-[1001]`}/>}
   </div>;
 
 }; 

@@ -65,6 +65,8 @@ type ChartState = {
   // True when (chart stable && ((spec exists and is refreshable) || spec does not exist))
   // Always false when status_chart !== "stable"
   user_can_refresh: boolean 
+  // Whether or not the vega-lite chart is actively resizing 
+  is_resizing: boolean 
 }; 
 
 interface ChartInfoPopoverProps extends PropsWithChildren, ChartState {
@@ -105,7 +107,6 @@ const ChartInfoPopover: React.FC<ChartInfoPopoverProps> = ({
   // props.children are the elements we want to serve as the "button" that opens the model. 
   // This group of elements will have a click listener attached by this component. 
   const { age_minutes, query_runtime_secs } = spec || {}; 
-  const buttonRef = useRef(null); 
 
   // Compute text values for populating tooltip body 
   const empty = "n/a"; 
@@ -194,7 +195,7 @@ const ChartInfoPopover: React.FC<ChartInfoPopoverProps> = ({
 }
 
 const ChartStatusBox: React.FC<ChartStatusBoxProps> = ({
-  spec, status_storage_endpoint, user_can_refresh, status_chart
+  spec, status_storage_endpoint, user_can_refresh, status_chart, is_resizing
 }) => {
 
   let pingAnimation = false; 
@@ -214,14 +215,20 @@ const ChartStatusBox: React.FC<ChartStatusBoxProps> = ({
     // Chart is stable. Couldn't load new spec and no old spec exists. 
     statusString = "failed"; 
     statusIndicatorColorClass = "bg-red-500"; 
-  } else if (spec && !user_can_refresh) {
-    // Chart is stable. Spec is present and non-refreshable
-    statusString = "up to date"; 
-    statusIndicatorColorClass = "bg-green-500"; 
-  } else if (spec && user_can_refresh) {
-    // Chart is stable. Spec is present and refreshable
-    statusString = "refreshable"; 
-    statusIndicatorColorClass = "bg-yellow-500"; 
+  } else if (spec) {
+    if (is_resizing) {
+      pingAnimation = true; 
+      statusString = "resizing"; 
+      statusIndicatorColorClass = "bg-emerald-400";
+    } else if (!user_can_refresh) {
+      // Chart is stable. Spec is present and non-refreshable
+      statusString = "up to date"; 
+      statusIndicatorColorClass = "bg-green-500"; 
+    } else { 
+      // Chart is stable. Spec is present and refreshable
+      statusString = "refreshable"; 
+      statusIndicatorColorClass = "bg-yellow-500"; 
+    }
   } else {
     throw new Error(`Invalid state. 
     spec: ${spec ? 'exists' : 'null'}
@@ -231,8 +238,7 @@ const ChartStatusBox: React.FC<ChartStatusBoxProps> = ({
   }
 
   return <div className="flex justify-center pl-2 pr-2 pt-1 pb-1">
-    <h6 className="font-bold inline">status:</h6>
-    <p className="inline ml-1 mr-2">{statusString}</p>
+    <p className="inline ml-1 mr-2 text-neutral-700">{statusString}</p>
     <div className="inline-flex items-center">
         {pingAnimation ? 
           <span className={`absolute rounded-full w-3.5 h-3.5 ${statusIndicatorColorClass} ${pingAnimationClass}`}></span>
@@ -265,11 +271,13 @@ const initialState: ChartState = {
   status_refresh_endpoint: null, 
   status_storage_endpoint: null, 
   user_can_refresh: false, 
+  is_resizing: false,
 };
 
 
 type Action =
  | { type: "start-loading" }
+ | { type: "set-resizing", is_resizing: boolean }
  | { type: "replace-state", chart_state: ChartState }
  | { type: "toggle-user-can-refresh" }
  | { type: "update-spec-age" };
@@ -277,6 +285,8 @@ type Action =
 
 function reducer(state: ChartState, action: Action): ChartState {
   switch (action.type) {
+    case "set-resizing": 
+      return {...state, is_resizing: action.is_resizing}; 
     case "start-loading": 
       return reducerAfterware({
         spec: state.spec,
@@ -284,6 +294,7 @@ function reducer(state: ChartState, action: Action): ChartState {
         status_refresh_endpoint: "pending", 
         status_storage_endpoint: "pending", 
         user_can_refresh: false, 
+        is_resizing: state.is_resizing, 
       })
     case "replace-state":
       return reducerAfterware(action.chart_state);
@@ -304,7 +315,7 @@ const Chart : React.FC<{ name: string; height?: number; }> = ({ name, height = 3
   const [state, dispatch] = useReducer(reducer, initialState); 
   const ref_header = useRef(null); 
   const [header_width, header_height] = useSize(ref_header); 
-  const { spec, status_chart, user_can_refresh } = state; 
+  const { spec, status_chart, user_can_refresh, is_resizing } = state; 
 
   useEffect(() => {
     if (status_chart === 'pre-loading') {
@@ -376,34 +387,42 @@ const Chart : React.FC<{ name: string; height?: number; }> = ({ name, height = 3
     if (spec) dispatch({type: "update-spec-age"}); 
   }, RECOMPUTE_SPEC_AGE_SECONDS * 1000);
 
+  const setResizing = (new_is_resizing: boolean) => {
+    if (is_resizing !== new_is_resizing) dispatch({type: "set-resizing", is_resizing: new_is_resizing});
+  }
+
   // Determine the chart body 
   let chartBody; 
   if (!spec) {
     const bodyText = ["pre-loading", "loading"].includes(status_chart) ? "Loading..." : "Error"; 
     chartBody = <div className="flex items-center justify-center" style={{ height }}>
-      {bodyText}
+      <p>{bodyText}</p>
     </div>;
   } else {
     // Regardless of chart state, if the spec exists, we show the chart.
     chartBody = <div className="flex items-center justify-center">
       <VegaLiteChart 
+      className={undefined}
       name={name} 
       spec={spec.spec as Object} 
       css={spec.css}
       height={height}
+      setResizing={setResizing}
       width_paths={spec.width_paths}
       target_width={header_width * .9}/>
     </div>;
   }
 
-  return <div>
+  const refreshChart = () => {
+    if (user_can_refresh) dispatch({type: "start-loading"});
+  }; 
+
+  return <div className="overflow-hidden">
     {/* Chart Header */}
     <div ref={ref_header} className="grid gap-4 grid-cols-2 grid-rows-1">
       <div className="p-2"><h4 className="font-bold">{name}</h4></div>
       <div className="flex justify-end">
-        <ChartInfoPopover {...state} refreshChart={() => {
-          if (user_can_refresh) dispatch({type: "start-loading"});
-        }}>
+        <ChartInfoPopover {...state} refreshChart={refreshChart}>
           <ChartStatusBox {...state}/>
         </ChartInfoPopover>
       </div>
