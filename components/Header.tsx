@@ -7,7 +7,7 @@ const Header : React.FC<{
   children
 }) => {
   return (
-    <div className="grid grid-flow-col px-4 py-4 border-b border-slate-500 bg-[#daebf7]">
+    <div className="grid grid-cols-6 px-4 py-4 border-b border-slate-500 bg-[#daebf7]">
       <div className="col-span-2 flex items-center justify-start">
         <Navigation/>
       </div>
@@ -15,7 +15,7 @@ const Header : React.FC<{
         <img src="/beanstalk.svg" className="h-6" /> 
       </div>
       <div className="col-span-2 flex items-center justify-end">
-        More links
+        ???
       </div>
     </div>
   )
