@@ -151,9 +151,7 @@ const ChartInfoPopover: React.FC<ChartInfoPopoverProps> = ({
             {children}
           </Popover.Button>
           {/* Vega lite action button has zIndex of 1000 so this ensures that popup overlays it */}
-          <Popover.Panel 
-          className="absolute right-2 top-12 z-10 w-96" 
-          style={{"zIndex": 1001}}>
+          <Popover.Panel className="absolute right-2 top-12 z-10 w-96 z-[1005]">
           {({ close }) => (
             <div className="block border border-solid border-sky-500 rounded-md p-3 bg-slate-50">
               {/* Chart metadata */}

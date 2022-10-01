@@ -1,4 +1,5 @@
-import React, { Fragment, useContext } from "react";
+import React, { Fragment, useContext, useEffect } from "react";
+import { useRouter } from 'next/router'; 
 import { Listbox, Transition } from '@headlessui/react';
 import { CheckIcon, ChevronUpDownIcon } from '@heroicons/react/20/solid'; 
 import AppContext, { IAppContext } from "./AppContext";
@@ -7,9 +8,14 @@ import { Page, pages } from "../state/app/reducer";
 
 const Navigation: React.FC<{}> = ({}) => {
 
+  const router = useRouter()
   const appContext: IAppContext = useContext(AppContext) as IAppContext;
   const { state, dispatch } = appContext; 
   const { currentPage } = state; 
+
+  useEffect(() => {
+    router.push(`/${currentPage.name}`); 
+  }, [currentPage]); 
 
   const setPage = (page: Page) => dispatch({type: "select-page", page: page}); 
 
@@ -18,7 +24,7 @@ const Navigation: React.FC<{}> = ({}) => {
       <Listbox value={currentPage} onChange={setPage}>
         <div className="relative mt-1">
           <Listbox.Button className="relative w-full cursor-default rounded-lg bg-white py-2 pl-3 pr-10 text-left shadow-md focus:outline-none focus-visible:border-indigo-500 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-opacity-75 focus-visible:ring-offset-2 focus-visible:ring-offset-orange-300 sm:text-sm">
-            <span className="block truncate">{currentPage.name}</span>
+            <span className="block truncate">{currentPage.label}</span>
             <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
               <ChevronUpDownIcon
                 className="h-5 w-5 text-gray-400"
@@ -50,7 +56,7 @@ const Navigation: React.FC<{}> = ({}) => {
                           selected ? 'font-medium' : 'font-normal'
                         }`}
                       >
-                        {page.name}
+                        {page.label}
                       </span>
                       {selected ? (
                         <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-amber-600">
