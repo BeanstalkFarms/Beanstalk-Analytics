@@ -8,7 +8,10 @@ export type Page = {
 
 const pageLabels: {[key in PageName]: string} = {
     "": "Beanstalk Credit Profile", 
-    "farmers_market": "Farmer's Market", 
+    "FarmersMarket": "Farmer's Market", 
+    "Barn": "Barn", 
+    "Silo": "Silo", 
+    "Field": "Field"
 }
 export const pages: Array<Page> = ALL_PAGE_NAMES.map((page_name: PageName, i: number) => ({
     id: i, name: page_name, label: pageLabels[page_name]
