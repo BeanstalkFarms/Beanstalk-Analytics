@@ -204,7 +204,7 @@ curl "http://localhost:8080/schemas/refresh?data=silo"
 
 curl "http://localhost:8080/schemas/refresh?data=silo&force_refresh=true"
 
-curl "http://localhost:8080/schemas/refresh?data=silo,fieldoverview"
+curl "http://localhost:8080/schemas/refresh?data=silo,farmers_market_volume"
 
 curl "http://localhost:8080/schemas/refresh?data=*"
 ```

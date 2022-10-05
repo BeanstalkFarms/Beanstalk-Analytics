@@ -1,5 +1,5 @@
 import os 
-from typing import Tuple, Dict 
+from typing import Tuple, Dict, List
 
 from subgrounds.subgrounds import Subgrounds, Subgraph
 from pandas import DataFrame
@@ -43,6 +43,11 @@ def remove_prefix(df: DataFrame, prefix: str):
         if c.startswith(prefix): 
             cols[i] = c[len(prefix):]
     df.columns = cols 
+    return df 
+
+def remove_prefixes(df: DataFrame, prefixes: List[str]):
+    for p in prefixes: 
+        df = remove_prefix(df, p)
     return df 
 
 

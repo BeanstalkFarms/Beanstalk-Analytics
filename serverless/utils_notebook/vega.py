@@ -16,6 +16,19 @@ def condition_union(op_compare, op_join, values):
     return expr 
 
 
+def stack_order_expr(col_var, col_values):
+    expr_str = (
+        ' '.join(
+            [
+                f"datum['{col_var}'] === '{m}' ? {i} : " 
+                for i, m in enumerate(col_values)
+            ]
+        ) 
+        + str(len(col_values))
+    ) 
+    return expr_str
+
+
 def apply_css(css): 
     """Applies css stylesheet to current cell output.
     

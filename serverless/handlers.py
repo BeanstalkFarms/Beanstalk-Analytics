@@ -55,10 +55,9 @@ def handler_charts_refresh(request) -> Tuple[any, int]:
             ), 404 
 
     # Optionally re-compute and upload each schema
-    schema_names = set(schema_names) # ensure no duplicate computation 
     statuses = {}
     code = 200 
-    for schema_name in schema_names:  
+    for schema_name in set(schema_names):  # ensure no duplicate computation 
         try:
             cur_dtime = datetime.datetime.now(datetime.timezone.utc)
             blob, exists, age_seconds = sc.get_blob(f"schemas/{schema_name}.json", cur_dtime)

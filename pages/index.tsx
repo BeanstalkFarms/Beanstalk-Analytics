@@ -15,29 +15,9 @@ const Home: NextPage = () => {
       <div className="block md:grid md:grid-cols-6 gap-4 m-4">
         <div className="col-span-6">
           <Module>
-            <Chart name="BeanstalkCreditworthiness" />
+            <Chart name="credit_profile" />
           </Module>
         </div>
-        {/* <div className="col-span-6">
-          <Module>
-            <Chart name="FarmersMarketHistory" />
-          </Module>
-        </div> */}
-        {/* <div className="col-span-6">
-          <Module>
-            <Chart name="FertilizerBreakdown" />
-          </Module>
-        </div> */}
-        {/* <div className="col-span-6">
-          <Module>
-            <Chart name="FieldOverview" />
-          </Module>
-        </div> */}
-        {/* <div className="col-span-6">
-          <Module>
-            <Chart name="noexist" />
-          </Module>
-        </div> */}
       </div>
     </Page>
   );
