@@ -8,6 +8,7 @@ from subgrounds.pagination import ShallowStrategy
 
 from .utils import remove_prefix
 from .testing import validate_season_series
+from .constants import ADDR_BEANSTALK
 
 
 def synthetic_field_float_div_precision(
@@ -25,6 +26,10 @@ def synthetic_field_float_div_precision(
             getattr(Query, process_field_name) 
         ) 
     ) 
+
+
+def get_first_row(row): 
+    return row.iloc[-1]
 
 
 @dataclass
@@ -191,4 +196,86 @@ class QueryManager:
         ]]
         assert not df.isnull().values.any()
         validate_season_series(df)
+        return df 
+
+    def query_field_daily_snapshots(self, fields=None): 
+        sg = self.sg 
+        bs = self.bs 
+        field_precision = {
+            'newHarvestablePods': 1e6,
+            'newHarvestedPods': 1e6,
+            'totalHarvestablePods': 1e6,
+            'totalHarvestedPods': 1e6,
+            'newPods': 1e6,
+            'newSoil': 1e6,
+            'numberOfSowers': None,
+            'numberOfSows': None,
+            'podIndex': 1e6,
+            'podRate': None,
+            'realRateOfReturn': None,
+            'season': None,
+            'sownBeans': 1e6,
+            'timestamp': None,
+            'totalNumberOfSowers': None,
+            'totalNumberOfSows': None,
+            'totalPods': 1e6,
+            'totalSoil': 1e6,
+            'totalSownBeans': 1e6,
+            'weather': None,   
+        }
+        field_agg = {
+            'newHarvestablePods': 'sum', 
+            'newHarvestedPods': 'sum', 
+            'totalHarvestablePods': 'max', 
+            'totalHarvestedPods': 'max', 
+            'newPods': 'sum', 
+            'newSoil': 'sum', 
+            'numberOfSowers': 'sum', 
+            'numberOfSows': 'sum', 
+            'podIndex': get_first_row,
+            'podRate': get_first_row,
+            'realRateOfReturn': get_first_row,
+            'sownBeans': 'sum', 
+            'timestamp': "max", 
+            'totalNumberOfSowers': get_first_row,
+            'totalNumberOfSows': get_first_row,
+            'totalPods': 'max', 
+            'totalSoil': get_first_row,
+            'totalSownBeans': 'max', 
+            'weather': get_first_row,
+        }
+        fields = fields or list(field_precision.keys())
+        drop_timestamp = False 
+        if "timestamp" not in fields:
+            # Required for aggregation perfomred later on 
+            drop_timestamp = True 
+            fields.append("timestamp")
+        fs = bs.Query.fieldDailySnapshots(
+            orderBy="timestamp", 
+            orderDirection="asc", 
+            first=10000, 
+            where={"field": ADDR_BEANSTALK}
+        )
+        df = sg.query_df(
+            [getattr(fs, key) for key in fields], 
+            pagination_strategy=ShallowStrategy
+        )
+        df = remove_prefix(df, "fieldDailySnapshots_")
+        # Modify precision 
+        for col in fields: 
+            precision = field_precision.get(col)
+            if precision: 
+                df[col] = df[col] / precision 
+        # Perform aggregations to deal with duplicate seasons (pauses in beanstalk) 
+        df = (
+            df
+            .sort_values("timestamp")
+            .reset_index(drop=True)
+            .groupby('season')
+            .agg({k: v for k, v in field_agg.items() if k in df.columns})
+            .reset_index()
+        ) 
+        if drop_timestamp: 
+            df = df.drop(columns=['timestamp'])
+        validate_season_series(df, allow_missing=True)
         return df 

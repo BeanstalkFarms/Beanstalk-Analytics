@@ -1,12 +1,11 @@
 import json
-from typing import Optional 
+from typing import Optional, List 
 
 import altair as alt 
+import pandas as pd 
 from IPython.display import JSON, display, HTML 
 from deepdiff import DeepSearch
 from deepdiff.path import _path_to_elements
-
-from .utils import is_number
 
 
 def condition_union(op_compare, op_join, values): 
@@ -27,6 +26,36 @@ def stack_order_expr(col_var, col_values):
         + str(len(col_values))
     ) 
     return expr_str
+
+
+def wide_to_longwide(
+    df: pd.DataFrame, 
+    join_col: str, 
+    id_cols: List[str], 
+    value_cols: List[str], 
+    sort_col: Optional[str] = None
+): 
+    """Vega specific data transformation, useful for stacked area plot 
+    
+    1. Convert the df from wide form to long form via pd.DataFrame.melt.
+    2. Join the columns that we converted to values when melting back on to the resulting data frame.
+    
+    This ensures that each row of the dataframe has columns storing all values for the row's unique 
+    combination of values from id_cols. 
+    
+    This data representation is kinda wack but it's the only way to do nice tooltips for stacked area 
+    plots in vega-lite so here we are. 
+    """
+    assert join_col in id_cols 
+    df = (
+        df
+        .melt(id_vars=id_cols, value_vars=value_cols)
+        .merge(df.loc[:,value_cols + [join_col]], on=join_col)
+    ) 
+    if sort_col: 
+        df = df.sort_values(sort_col) 
+    return df 
+
 
 
 def apply_css(css): 
@@ -155,3 +184,78 @@ def output_chart(c: alt.Chart, css: Optional[str] = None):
         "width_paths": compute_width_paths(spec),
         "css": css, 
     })
+
+
+def chart_stack_area_overlay_line_timeseries(
+    df: pd.DataFrame, 
+    timestamp_col: str, 
+    metrics: List[str], 
+    area_metrics: List[str], 
+    title: str, 
+    title_xaxis: str = "Date", 
+    title_yaxis: str = "Value", 
+    color_map = None,  
+    xaxis_params = None, 
+    width: int = 700, 
+): 
+    """Creates a stacked area plot with lines overlaid on top 
+    
+    Assumes that data is in long-wide format (i.e. df was processed with function wide_to_longwide)
+    """
+    xaxis_params_default = dict(
+        formatType="time", 
+        ticks=False, 
+        labelExpr="timeFormat(toDate(datum.value), '%b %Y')", 
+        labelOverlap=True, 
+        labelSeparation=50, 
+        labelPadding=5, 
+        title=title_xaxis, 
+        labelAngle=0, 
+    )
+    x = alt.X(f"{timestamp_col}:O", axis=alt.Axis(**{
+        **xaxis_params_default, **(xaxis_params or {})
+    }))
+
+    if color_map: 
+        color_scale = alt.Scale(domain=metrics, range=[color_map[m] for m in metrics])
+    else: 
+        color_scale = alt.Scale(domain=metrics)
+    base = (
+        alt.Chart(df)
+        .encode(
+            x=x, 
+            color=alt.Color(
+                "variable:N", 
+                scale=color_scale, 
+                legend=alt.Legend(title=None)
+            )
+        )
+        .properties(title=title, width=width)
+    )
+
+    area = (
+        base
+        .transform_filter(condition_union("==", "|", area_metrics))
+        .transform_calculate(sort_col=stack_order_expr("variable", metrics))
+        .mark_area(point='transparent')
+        .encode(
+            y=alt.Y("value:Q", axis=alt.Axis(format=".3~s")), 
+            tooltip=(
+                [alt.Tooltip(f'{timestamp_col}:O', timeUnit="yearmonthdate", title="date")] + 
+                [alt.Tooltip(f'{m}:Q', format=",d") for m in metrics]
+            ), 
+            order="sort_col:O", 
+        )
+    )
+
+    line = (
+        base
+        .transform_filter(condition_union("!=", "&", area_metrics)  )
+        .mark_line()
+        .encode(
+            y=alt.Y("value:Q", axis=alt.Axis(title=title_yaxis)), 
+        )
+    )
+    
+    c = area + line
+    return c 
