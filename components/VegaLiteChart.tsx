@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import useSize from '@react-hook/size';
-import { useEffect, useReducer, useRef } from "react";
+import { useEffect, useReducer, useRef, useLayoutEffect } from "react";
 import { VegaLite } from 'react-vega';
-import { get, set, cloneDeep, omit } from "lodash";
+import { set, cloneDeep, omit } from "lodash";
+import useInterval from '../hooks/useInterval';
 
 export type WidthPaths = Array<{ path: Array<string | number>, factor: number, value: number }>; 
 
@@ -17,6 +18,9 @@ const apply_w_factor = (s: Object, wpaths: WidthPaths, wf: number) => {
 }; 
 
 const w_tol = 10;
+const is_too_small = (w: number, w_target: number) => w < (w_target - w_tol); 
+const is_too_large = (w: number, w_target: number) => w > (w_target + w_tol);
+
 const w_factor_initial = 1; 
 const w_factor_delta_initial = .5;
 
@@ -24,15 +28,17 @@ type ResizeState = {
   // The current target width for the resize attempt    
   w_target: number 
   // Multiplicative factor by which we multiply all vega-lite width path values.
-  // We are attempting to find the value of w_factor that gives us a width close 
+  // We are attempting to find the value of wf that gives us a width close 
   // enough to w_target to be considered successful. 
-  w_factor: number 
-  // Additive factor by which we change w_factor when resizing. 
-  w_factor_delta: number 
-  // Counter variable for number of iterations spent resizing 
-  counter: number 
+  wf: number
+  // Additive factor by which we change wf when resizing. 
+  wf_delta: number 
   // The width of the chart on the previous resize iteration. 
   w_last: number 
+  // Counter for num iterations spent resizing 
+  counter: number 
+  // epoch (milliseconds)
+  epoch: number
 };
 
 type State = {
@@ -42,36 +48,9 @@ type State = {
   resize: ResizeState
 }; 
 
-const getInitialState = (
-  spec: Object, 
-  width_paths: WidthPaths, 
-  w_target: number,
-): State => ({ 
-    vega_lite_spec: apply_w_factor(
-      cloneDeep(spec), width_paths, w_factor_initial
-    ),
-    resize: {
-      w_target,
-      w_factor: w_factor_initial, 
-      w_factor_delta: w_factor_delta_initial, 
-      w_last: -1, 
-      counter: 0, 
-    }
-}); 
-
 type Action =
-  | { 
-      type: "resize", 
-      width_paths: WidthPaths, 
-      w_factor: number, 
-      w_factor_delta: number, 
-      w: number, 
-    }
-  | { 
-      type: "trigger-resize", 
-      width_paths: WidthPaths, 
-      w_target: number 
-    };
+    { type: "resize-set-width", width_paths: WidthPaths, w: number, w_target: number }
+  | { type: "resize", width_paths: WidthPaths, w: number, };
 
 
 const MAX_ITERATION_LIMIT = 50; 
@@ -79,54 +58,83 @@ const MAX_ITERATION_LIMIT = 50;
 
 function reducer(state: State, action: Action): State {
 
+    const { vega_lite_spec, resize } = state; 
+    const { w_target, wf, w_last, wf_delta, counter } = resize; 
+
     switch (action.type) {
-      case "trigger-resize": 
-        console.log(`Triggering a rezise to ${action.w_target}`);
-        return getInitialState(
-          state.vega_lite_spec, 
-          action.width_paths, 
-          action.w_target, 
-        );
+      case "resize-set-width": 
+        // Resetting of the resize object. Occurs when target width changes 
+        console.log(`Resize reset. Current Width: ${action.w} Target width: ${action.w_target}`);
+        return {
+          vega_lite_spec: apply_w_factor(
+            cloneDeep(vega_lite_spec), action.width_paths, w_factor_initial
+          ),
+          resize: {
+            w_target: action.w_target,
+            wf: w_factor_initial,  
+            wf_delta: w_factor_delta_initial, 
+            w_last: action.w, 
+            counter: 0, 
+            epoch: Date.now()
+          }
+        };
       case "resize":  
-        const w_factor = action.w_factor; 
-        const w_factor_delta = get(action, "w_factor_delta", state.resize.w_factor_delta); 
-        if (w_factor < 0) {
-          throw new Error("w_factor cannot be negative."); 
-        } else if (w_factor_delta < 0) {
-          throw new Error("w_factor_delta cannot be negative."); 
+        // If we need to resize, compute new values for wf and wf_delta 
+        const too_small = is_too_small(action.w, w_target); 
+        const too_large = is_too_large(action.w, w_target); 
+        let new_wf_delta; 
+        let new_wf; 
+        // I just love how I literally have no idea what I'm doing but this just works 
+        if (too_small) {
+          let did_overshoot = counter > 0 && w_last > (w_target + w_tol);
+          new_wf_delta = did_overshoot ? wf_delta / 2 : wf_delta; 
+          new_wf = wf + new_wf_delta; 
+        } 
+        else if (too_large) {
+          let did_overshoot = w_last < (w_target - w_tol);
+          new_wf_delta = did_overshoot ? wf_delta / 2 : wf_delta; 
+          while (wf - new_wf_delta <= 0) {
+            new_wf_delta /= 2; 
+          }
+          new_wf = wf - new_wf_delta; 
+        } else {
+          return state; 
+        }
+        // Failure conditions 
+        if (new_wf < 0) {
+          throw new Error("wf cannot be negative."); 
+        } else if (wf_delta < 0) {
+          throw new Error("wf_delta cannot be negative."); 
         } else if (state.resize.counter > MAX_ITERATION_LIMIT) {
           throw new Error(
             `Resizing algorithm exceeded max iteration limit of ${MAX_ITERATION_LIMIT}.`
           );
         }
-        console.log(
-          `Last Width: ${state.resize.w_last} Current Width: ${action.w} Target Width: ${state.resize.w_target}\n` + 
-          `Current width ${state.resize.w_factor < w_factor ? "too small" : "too large"}\n` + 
-          `w_factor: ${state.resize.w_factor} -> ${w_factor}\n` + 
-          `w_factor_delta: ${state.resize.w_factor_delta}` + (
-            state.resize.w_factor_delta !== w_factor_delta ? ` -> ${w_factor_delta}\n` : '\n'
-          ) + 
-          `iteration: ${state.resize.counter}`
-        );
+        // console.log(
+        //   `Resize step start\n` +
+        //   `Last Width: ${w_last} Current Width: ${action.w} Target Width: ${w_target}\n` + 
+        //   `Current width ${wf < new_wf ? "too small" : "too large"}\n` + 
+        //   `wf: ${wf} -> ${new_wf}\n` + 
+        //   `wf_delta: ${wf_delta}` + (wf_delta !== new_wf_delta ? ` -> ${new_wf_delta}\n` : '\n') + 
+        //   `iteration: ${state.resize.counter}`
+        // );
         const new_spec = apply_w_factor(
             // TODO: @SiloChad the spec updates aren't working correctly unless I clone the 
             //      entire object. This probably is terrible for performance so any suggestions on 
-            //      how to make this more efficient. 
-            cloneDeep(state.vega_lite_spec), 
+            //      how to make this more efficient?
+            cloneDeep(vega_lite_spec), 
             action.width_paths, 
-            w_factor,
+            new_wf,
         ); 
-        // for (let { path, value } of action.width_paths) {
-        //   console.log(`reducer ${path} ${get(new_spec, path)} ${value}`); 
-        // }
         return {
           vega_lite_spec: new_spec, 
           resize: {
             w_target: state.resize.w_target, 
-            w_factor, 
-            w_factor_delta, 
-            counter: state.resize.counter + 1, 
+            wf: new_wf, 
+            wf_delta: new_wf_delta,
             w_last: action.w, 
+            counter: state.resize.counter + 1, 
+            epoch: Date.now()
           }
         };
       default:
@@ -134,13 +142,20 @@ function reducer(state: State, action: Action): State {
     }
 }
 
-const VegaLiteChart: React.FC<{ 
+interface VegaLiteChartProps {
   name: string, 
   spec: Object, 
   width_paths: WidthPaths, 
   height: number, 
   target_width: number, 
-}> = ({ name, spec, width_paths, height, target_width }) => {
+  css: string | null, 
+  className: string | undefined, 
+  setResizing: (new_is_resizing: boolean) => void 
+}; 
+
+const VegaLiteChart: React.FC<VegaLiteChartProps> = ({ 
+  name, spec, width_paths, height, target_width, css, setResizing, className
+}) => {
 
   const spec_no_data = cloneDeep(omit(spec, 'datasets')); 
   // @ts-ignore
@@ -148,63 +163,55 @@ const VegaLiteChart: React.FC<{
   
   const ref_wrapper = useRef<HTMLDivElement>(null); 
   const [w, h] = useSize(ref_wrapper);
-  const [state, dispatch] = useReducer(reducer, getInitialState(spec_no_data, width_paths, target_width)); 
+  const [resize_toggle, set_resize_toggle] = useState<boolean>(false); 
+  const [state, dispatch] = useReducer(reducer, { 
+    vega_lite_spec: spec_no_data,
+    resize: { 
+      w_target: 0, wf: 0, wf_delta: 0, counter: 0, w_last: 0, epoch: Date.now()
+    }, 
+  });
   const { vega_lite_spec, resize } = state; 
-  const { w_target, w_factor, w_factor_delta, w_last } = resize; 
+  const { w_target, epoch } = resize; 
 
   useEffect(() => {
-    // for (let { path, value } of width_paths) {
-    //   console.log(`effect ${path} ${get(vega_lite_spec, path)} ${value}`); 
-    // }
-    // console.log(vega_lite_spec)
-    const is_parent_rendered = w_target > 0; 
-    const is_self_rendered = w > 0; 
-    const width_stable = w_last == w; // don't resize when this is true 
-    const ready = spec && is_parent_rendered && is_self_rendered; 
-    const too_small = ready && w < (w_target - w_tol); 
-    const too_large = ready && w > (w_target + w_tol);
-    console.log(ready, too_small, too_large, width_stable);
-    if (ready && target_width !== w_target) {
-      dispatch({type: "trigger-resize", width_paths, w_target: target_width});  
+    if (target_width !== w_target) {
+      dispatch({ type: "resize-set-width", width_paths, w_target: target_width, w });  
     } 
-    else if ((too_small || too_large) && (!width_stable)) {
-      let sign; 
-      let new_w_factor_delta
-      if (too_small) {
-        // Need to increase size of chart 
-        let did_overshoot = w_last > (w_target + w_tol);
-        // If we are too small on current iteration but were too large on prior iteration, 
-        // then we overshot the optimal width range. Thus, we decrease w_factor_delta to 
-        // minimize the chances of overshooting the optimal range again. 
-        new_w_factor_delta = did_overshoot ? w_factor_delta / 2 : w_factor_delta; 
-        sign = 1; 
-      } else {
-        // Need to decrease size of chart 
-        let did_overshoot = w_last < (w_target - w_tol);
-        // If we are too large on current iteration but were too small on prior iteration, 
-        // then we overshot the optimal width range. Thus, we decrease w_factor_delta to 
-        // minimize the chances of overshooting the optimal range again. 
-        new_w_factor_delta = did_overshoot ? w_factor_delta / 2 : w_factor_delta; 
-        // It's possible that if we use the above value of new_w_factor_delta, then we 
-        // might cause w_factor to be negative. We eliminate this possibility by doing the following. 
-        while (w_factor - new_w_factor_delta <= 0) {
-          new_w_factor_delta /= 2; 
-        }
-        sign = -1; 
-      }
-      dispatch({ 
-        type: "resize", 
-        width_paths,
-        w_factor: w_factor + sign * new_w_factor_delta, 
-        w_factor_delta: new_w_factor_delta, 
-        w
-      }); 
-    } 
-  });
+  }, [w, width_paths, target_width, w_target])
 
+  useLayoutEffect(() => {
+    if (w !== 0) {
+      dispatch({ type: "resize", width_paths, w });
+    }
+  }, [w, width_paths, w_target, resize_toggle]);
+
+  useInterval(() => {
+    if ((Date.now() - epoch) >= 500 && (is_too_small(w, w_target) || is_too_large(w, w_target))) {
+      set_resize_toggle(!resize_toggle);
+    }
+  }, 500); 
+
+  useLayoutEffect(() => {
+    const is_resizing = !(
+      target_width === w_target && !is_too_small(w, w_target) && !is_too_large(w, w_target)
+    );
+    setResizing(is_resizing); 
+  }, [w, target_width, w_target]); 
+
+  const is_resizing = !(
+    target_width === w_target && !is_too_small(w, w_target) && !is_too_large(w, w_target)
+  );
+
+  // Set to true to see effects of dynamic resizing. Only for debugging issues. 
+  const debug_resizing = false; 
+
+  // Z-index of 1001 required to hide action button 
   return <div ref={ref_wrapper} className="relative">
-    <VegaLite spec={vega_lite_spec} data={data} height={height}></VegaLite>
-    <div className="absolute top-0 left-0 w-full h-full bg-slate-300 opacity-50"></div>
+    {css ? <style>{css}</style> : null} 
+    <VegaLite spec={cloneDeep(vega_lite_spec)} data={data} height={height} className={className}></VegaLite>
+    {!is_resizing ? null : <div className={`
+    absolute top-0 left-0 w-full h-full ${debug_resizing ? 'bg-red-500' : 'bg-white'} 
+    flex items-center justify-center z-[1001]`}/>}
   </div>;
 
 }; 

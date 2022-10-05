@@ -1,16 +1,10 @@
 import os 
-import json
-from typing import Tuple, Dict 
+from typing import Tuple, Dict, List
 
-from dotenv import load_dotenv
 from subgrounds.subgrounds import Subgrounds, Subgraph
 from pandas import DataFrame
 from IPython.display import display 
 from IPython.core.display import HTML
-
-# TODO: Figure out a solution here 
-load_dotenv("../../.env")
-SUBGRAPH_URL = os.environ['SUBGRAPH_URL']
 
 
 def is_number(v): 
@@ -51,6 +45,11 @@ def remove_prefix(df: DataFrame, prefix: str):
     df.columns = cols 
     return df 
 
+def remove_prefixes(df: DataFrame, prefixes: List[str]):
+    for p in prefixes: 
+        df = remove_prefix(df, p)
+    return df 
+
 
 def ddf(df: DataFrame, **kwargs): 
     # jupyter notebook dataframe plotting utility 
@@ -66,7 +65,7 @@ def load_subgraph(subgraph_host=None, subgraph_type=None) -> Tuple[Subgrounds, S
     TODO: arg to select from different subgraph url's
     """
     sg = Subgrounds()
-    bs: Subgraph = sg.load_subgraph(SUBGRAPH_URL)
+    bs: Subgraph = sg.load_subgraph(os.environ['SUBGRAPH_URL'])
     return sg, bs 
 
 
