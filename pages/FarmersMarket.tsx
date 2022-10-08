@@ -14,11 +14,11 @@ const FarmersMarketPage: NextPage = () => {
             <Chart name="farmers_market_history" />
           </Module>
         </div>
-        <div className="col-span-6">
+        {/* <div className="col-span-6">
           <Module>
             <Chart name="farmers_market_volume" />
           </Module>
-        </div>
+        </div> */}
       </div>
     </Page>
   );

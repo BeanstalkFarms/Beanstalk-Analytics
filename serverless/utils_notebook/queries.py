@@ -1,4 +1,6 @@
+import json 
 from dataclasses import dataclass
+from pathlib import Path
 
 import numpy as np 
 import pandas as pd 
@@ -28,9 +30,15 @@ def synthetic_field_float_div_precision(
     ) 
 
 
-def get_first_row(row): 
+def get_last_row(row): 
     return row.iloc[-1]
 
+
+def adjust_precision(df, precisions): 
+    for col in df.columns: 
+        precision = precisions.get(col)
+        if precision: 
+            df[col] = df[col] / precision 
 
 @dataclass
 class QueryManager: 
@@ -50,6 +58,9 @@ class QueryManager:
         """
         sg = self.sg 
         bs = self.bs 
+        precisions = {
+            "beans": 1e6
+        }
         extra_cols = extra_cols or []
         where = where or {}
         q = bs.Query.seasons(first=100000, where=where, orderBy="season", orderDirection="asc")
@@ -62,6 +73,7 @@ class QueryManager:
             pagination_strategy=ShallowStrategy
         )
         df = remove_prefix(df, "seasons_")
+        adjust_precision(df, precisions)
         df['timestamp'] = pd.to_datetime(df['timestamp'], unit='s')
         df = df.sort_values("timestamp").reset_index(drop=True)
         incorrect_timestamps = df.loc[df.timestamp == '1970-01-01 00:00:00']
@@ -201,7 +213,8 @@ class QueryManager:
     def query_field_daily_snapshots(self, fields=None): 
         sg = self.sg 
         bs = self.bs 
-        field_precision = {
+        precisions = {
+            'id': None, 
             'newHarvestablePods': 1e6,
             'newHarvestedPods': 1e6,
             'totalHarvestablePods': 1e6,
@@ -223,7 +236,8 @@ class QueryManager:
             'totalSownBeans': 1e6,
             'weather': None,   
         }
-        field_agg = {
+        aggs = {
+            'id': get_last_row, 
             'newHarvestablePods': 'sum', 
             'newHarvestedPods': 'sum', 
             'totalHarvestablePods': 'max', 
@@ -232,23 +246,22 @@ class QueryManager:
             'newSoil': 'sum', 
             'numberOfSowers': 'sum', 
             'numberOfSows': 'sum', 
-            'podIndex': get_first_row,
-            'podRate': get_first_row,
-            'realRateOfReturn': get_first_row,
+            'podIndex': get_last_row,
+            'podRate': get_last_row,
+            'realRateOfReturn': get_last_row,
             'sownBeans': 'sum', 
             'timestamp': "max", 
-            'totalNumberOfSowers': get_first_row,
-            'totalNumberOfSows': get_first_row,
+            'totalNumberOfSowers': get_last_row,
+            'totalNumberOfSows': get_last_row,
             'totalPods': 'max', 
-            'totalSoil': get_first_row,
+            'totalSoil': get_last_row,
             'totalSownBeans': 'max', 
-            'weather': get_first_row,
+            'weather': get_last_row,
         }
-        fields = fields or list(field_precision.keys())
-        drop_timestamp = False 
+        fields = fields or list(precisions.keys())
+        if "season" not in fields: 
+            fields.append("season") 
         if "timestamp" not in fields:
-            # Required for aggregation perfomred later on 
-            drop_timestamp = True 
             fields.append("timestamp")
         fs = bs.Query.fieldDailySnapshots(
             orderBy="timestamp", 
@@ -261,21 +274,67 @@ class QueryManager:
             pagination_strategy=ShallowStrategy
         )
         df = remove_prefix(df, "fieldDailySnapshots_")
-        # Modify precision 
-        for col in fields: 
-            precision = field_precision.get(col)
-            if precision: 
-                df[col] = df[col] / precision 
+        adjust_precision(df, precisions)
         # Perform aggregations to deal with duplicate seasons (pauses in beanstalk) 
         df = (
             df
             .sort_values("timestamp")
             .reset_index(drop=True)
             .groupby('season')
-            .agg({k: v for k, v in field_agg.items() if k in df.columns})
+            .agg({k: v for k, v in aggs.items() if k in df.columns})
             .reset_index()
         ) 
-        if drop_timestamp: 
-            df = df.drop(columns=['timestamp'])
+        validate_season_series(df, allow_missing=True)
+        return df 
+
+    def _silo_emissions_pre_replant(self) -> pd.DataFrame: 
+        """Temporary solution to subgraph not having silo emissions pre-replant 
+        
+        Data was downloaded from dune 
+        """
+        with (Path(__file__).parents[0] / Path('data/SupplyIncrease.json')).open('r') as f: 
+            records = json.loads(f.read())['records'] 
+        return pd.DataFrame(records)
+
+    def query_silo_daily_snapshots(self, fields=None): 
+        sg = self.sg 
+        bs = self.bs 
+        precisions = {
+            'dailyBeanMints': 1e6,
+        }
+        aggs = {
+            'dailyBeanMints': 'sum',
+        }
+        fields = fields or list(precisions.keys())
+        if "season" not in fields: 
+            fields.append("season") 
+        if "timestamp" not in fields:
+            fields.append("timestamp")
+        silo_snaps = bs.Query.siloDailySnapshots(
+            orderBy="timestamp", 
+            orderDirection="asc", 
+            first=100000, 
+            where={
+                "silo": ADDR_BEANSTALK, 
+                "season_gte": 6074 # TODO: remove this condition once silo history exists in subgraph 
+            }
+        )
+        df = sg.query_df(
+            [getattr(silo_snaps, key) for key in fields], 
+            pagination_strategy=ShallowStrategy
+        )
+        df = remove_prefix(df, "siloDailySnapshots_")
+        # Combine pre and post replant data (no seasons in common so outer join)
+        df = df.merge(self._silo_emissions_pre_replant(), how="outer",)
+        adjust_precision(df, precisions) 
+        # Perform aggregations to deal with duplicate seasons (pauses in beanstalk) 
+        df = (
+            df
+            .sort_values("timestamp")
+            .reset_index(drop=True)
+            .groupby('season')
+            .agg({k: v for k, v in aggs.items() if k in df.columns})
+            .reset_index()
+        ) 
         validate_season_series(df, allow_missing=True)
         return df 
