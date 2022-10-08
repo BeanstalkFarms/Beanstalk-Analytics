@@ -185,50 +185,91 @@ def output_chart(c: alt.Chart, css: Optional[str] = None):
         "css": css, 
     })
 
-
 def chart_stack_area_overlay_line_timeseries(
     df: pd.DataFrame, 
     timestamp_col: str, 
-    metrics: List[str], 
-    area_metrics: List[str], 
+    metrics,
+    area_metrics,
     title: str, 
-    title_xaxis: str = "Date", 
-    title_yaxis: str = "Value", 
-    color_map = None,  
-    xaxis_params = None, 
+    xaxis_kwargs = None, 
+    xaxis_kwargs_override: bool = False, 
+    yaxis_area_kwargs: dict = None, 
+    yaxis_area_kwargs_override: bool = False, 
+    yaxis_line_kwargs: dict = None, 
+    yaxis_line_kwargs_override: bool = False, 
+    color_map = None,      
+    tooltip_formats = None, 
+    separate_y_axes: bool = False, 
     width: int = 700, 
 ): 
     """Creates a stacked area plot with lines overlaid on top 
     
     Assumes that data is in long-wide format (i.e. df was processed with function wide_to_longwide)
     """
-    xaxis_params_default = dict(
+    tooltip_formats = tooltip_formats or {}
+
+    # x axis kwargs 
+    xaxis_kwargs_default = dict(
         formatType="time", 
         ticks=False, 
         labelExpr="timeFormat(toDate(datum.value), '%b %Y')", 
         labelOverlap=True, 
         labelSeparation=50, 
         labelPadding=5, 
-        title=title_xaxis, 
+        title='Date', 
         labelAngle=0, 
     )
-    x = alt.X(f"{timestamp_col}:O", axis=alt.Axis(**{
-        **xaxis_params_default, **(xaxis_params or {})
-    }))
+    xaxis_kwargs = xaxis_kwargs or {}
+    xaxis_kwargs = (
+        {**xaxis_kwargs_default, **(xaxis_kwargs or {})} 
+        if not xaxis_kwargs_override else 
+        xaxis_kwargs 
+    ) 
+    # y axis area kwargs 
+    yaxis_area_kwargs_default = dict() 
+    yaxis_area_kwargs = yaxis_area_kwargs or {}
+    yaxis_area_kwargs = (
+        {**yaxis_area_kwargs_default, **(yaxis_area_kwargs or {})} 
+        if not yaxis_area_kwargs_override else 
+        yaxis_area_kwargs 
+    ) 
+    # y axis line kwargs 
+    yaxis_line_kwargs_default = dict() 
+    yaxis_line_kwargs = yaxis_line_kwargs or {}
+    yaxis_line_kwargs = (
+        {**yaxis_line_kwargs_default, **(yaxis_line_kwargs or {})} 
+        if not yaxis_line_kwargs_override else 
+        yaxis_line_kwargs 
+    ) 
+    
+    # construct axes 
+    xaxis = alt.Axis(**xaxis_kwargs)
+    yaxis_area = alt.Axis(**yaxis_area_kwargs)
+    yaxis_line = alt.Axis(**yaxis_line_kwargs) 
+    
+    # Shared x encoding channel (lines and area on same time axis) 
+    x = alt.X(f"{timestamp_col}:O", axis=xaxis)
 
+    # Optional custom color scale 
     if color_map: 
         color_scale = alt.Scale(domain=metrics, range=[color_map[m] for m in metrics])
     else: 
         color_scale = alt.Scale(domain=metrics)
+        
+    # Tooltips
+    tooltips = (
+        [alt.Tooltip(f'{timestamp_col}:O', timeUnit="yearmonthdate", title="date")] + 
+        [alt.Tooltip(f'{m}:Q', format=tooltip_formats.get(m, ",d")) for m in metrics]
+    )
+        
     base = (
         alt.Chart(df)
+        # Ensures that stacked area is in same order as input 'metrics' 
+        .transform_calculate(stack_order=stack_order_expr("variable", metrics))
         .encode(
             x=x, 
-            color=alt.Color(
-                "variable:N", 
-                scale=color_scale, 
-                legend=alt.Legend(title=None)
-            )
+            color=alt.Color( "variable:N", scale=color_scale, legend=alt.Legend(title=None)), 
+            order=alt.Order('stack_order:Q', sort='ascending'),
         )
         .properties(title=title, width=width)
     )
@@ -238,24 +279,21 @@ def chart_stack_area_overlay_line_timeseries(
         .transform_filter(condition_union("==", "|", area_metrics))
         .transform_calculate(sort_col=stack_order_expr("variable", metrics))
         .mark_area(point='transparent')
-        .encode(
-            y=alt.Y("value:Q", axis=alt.Axis(format=".3~s")), 
-            tooltip=(
-                [alt.Tooltip(f'{timestamp_col}:O', timeUnit="yearmonthdate", title="date")] + 
-                [alt.Tooltip(f'{m}:Q', format=",d") for m in metrics]
-            ), 
-            order="sort_col:O", 
-        )
+        .encode(y=alt.Y("value:Q", axis=yaxis_area), tooltip=tooltips)
     )
 
     line = (
         base
-        .transform_filter(condition_union("!=", "&", area_metrics)  )
+        .transform_filter(condition_union("!=", "&", area_metrics))
         .mark_line()
-        .encode(
-            y=alt.Y("value:Q", axis=alt.Axis(title=title_yaxis)), 
-        )
+        .encode(y=alt.Y("value:Q", axis=yaxis_line))
     )
     
-    c = area + line
+    c = alt.layer(area, line)
+    if separate_y_axes: 
+        c = (
+            c
+            .resolve_scale(y="independent")
+            .resolve_axis(y="independent")
+        )
     return c 
