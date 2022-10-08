@@ -29,9 +29,7 @@ Any priority **3** or greater should be completed before v1 launch.
 ## Devops 
 
 - **(3)** Run end to end tests of all makefile commands before v1 launch. 
-- **(3)** Fix unit / integration tests to reflect new output object structures 
-  (inclusion of width paths and other metadata changed this slightly).
-  
+
 ## Documentation 
 
 - **(3)** Full documentation review for correctness. 
@@ -40,8 +38,6 @@ Any priority **3** or greater should be completed before v1 launch.
 
 ## Others 
 
-- **(3)** Minify supply increase file (used to fill in silo emissions data missing from subgraph)
-  - Currently this represents about 1/5 of the bundle size. 
 - **(1)** Convert backend from running notebooks to running scripts 
   - Based on some experiments in `serverless/notebooks/dev/ntbk_vs_script_performance.ipynb` there 
   we can shave off at least 2 seconds from all notebook executions (lower bound, would have to do)

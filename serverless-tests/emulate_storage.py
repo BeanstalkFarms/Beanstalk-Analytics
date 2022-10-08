@@ -12,9 +12,12 @@ logger = logging.getLogger(__name__)
 
 def localhost_port_open(port): 
 	try: 
-		output = subprocess.check_output(shlex.split(f"lsof -i :{port}")
-			).decode("utf-8"
-			).lower()
+		output = (
+			subprocess
+			.check_output(shlex.split(f"lsof -i :{port}"))
+			.decode("utf-8")
+			.lower()
+		)
 		print(output)
 		port_open = not ("localhost" in output or "1.0.0.127" in output) 
 	except subprocess.CalledProcessError: 

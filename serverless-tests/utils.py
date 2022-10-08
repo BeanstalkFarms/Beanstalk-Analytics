@@ -63,7 +63,7 @@ def call_api_validate(
 def call_storage_validate(schema_name) -> Tuple[datetime.datetime, dict]:
     """Calls storage client and validates response object. 
     
-    Returns the timestamp and schema. 
+    Returns the timestamp and spec. 
     """
     now = datetime.datetime.now(datetime.timezone.utc)
     BUCKET_NAME = os.environ['NEXT_PUBLIC_STORAGE_BUCKET_NAME']
@@ -76,12 +76,18 @@ def call_storage_validate(schema_name) -> Tuple[datetime.datetime, dict]:
     data = resp.json() 
     match data: 
         case {
-            "timestamp": str(tstamp), "schema": schema, "run_time_seconds": float(run_secs)
+            "timestamp": str(tstamp), 
+            "run_time_seconds": float(run_secs), 
+            "spec": spec, 
+            "width_paths": list(width_paths), 
+            "css": css
         }: 
             tstamp = datetime.datetime.fromisoformat(tstamp)
             assert isinstance(tstamp, datetime.datetime)
             assert run_secs
-            alt.Chart.from_json(json.dumps(schema))
+            alt.Chart.from_json(json.dumps(spec))
+            assert len(width_paths)
+            assert css is None or isinstance(css, str)
         case _: 
             assert False, "Object returned from storage has incorrect structure"
-    return tstamp, schema 
+    return tstamp, spec 
