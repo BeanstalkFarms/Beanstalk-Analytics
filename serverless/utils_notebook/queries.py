@@ -275,6 +275,8 @@ class QueryManager:
         )
         df = remove_prefix(df, "fieldDailySnapshots_")
         adjust_precision(df, precisions)
+        if "timestamp" in df.columns: 
+            df['timestamp'] = pd.to_datetime(df['timestamp'], unit='s')
         # Perform aggregations to deal with duplicate seasons (pauses in beanstalk) 
         df = (
             df

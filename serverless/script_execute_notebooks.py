@@ -2,7 +2,6 @@ import logging
 import json 
 from pathlib import Path 
 import argparse 
-from collections import defaultdict
 
 from utils_serverless.utils import NotebookRunner
 

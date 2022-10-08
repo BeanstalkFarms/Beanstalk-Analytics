@@ -56,7 +56,6 @@ class TestApiLocal:
     CHARTS_REFRESH_PARAMETERIZE = [
         # Refresh single chart 
         ({"data": "notebook_1"}, ['notebook_1'],),
-        ({"data": "notebook_3"}, ['notebook_3'],), 
         # Refresh multiple charts 
         ({"data": "notebook_1,notebook_2"}, ['notebook_1', 'notebook_2'],),
         # Refresh all charts 
