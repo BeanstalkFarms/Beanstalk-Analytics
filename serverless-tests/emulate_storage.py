@@ -2,7 +2,6 @@ import os
 import logging
 import subprocess 
 import shlex
-from contextlib import closing
 from urllib.parse import urlparse
 from gcp_storage_emulator.server import create_server
 

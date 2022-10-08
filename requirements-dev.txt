@@ -1,2 +1,3 @@
 pyyaml 
-gcp_storage_emulator # TODO: Once CORS issue is fixed in the library, put min version requirement on this. 
+# gcp_storage_emulator # TODO: Trying to get CORS fixes pushed to main library, but using fork for now. 
+git+https://github.com/tbiq/gcp-storage-emulator@9bced2f57227c3ea02bf94f37bd860556f30f202
