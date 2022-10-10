@@ -3,6 +3,7 @@ import useSize from '@react-hook/size';
 import { useEffect, useReducer, useRef, useLayoutEffect } from "react";
 import { VegaLite } from 'react-vega';
 import { set, cloneDeep, omit } from "lodash";
+import { parse, stringify, Stylesheet } from "css"; 
 import useInterval from '../hooks/useInterval';
 
 export type WidthPaths = Array<{ path: Array<string | number>, factor: number, value: number }>; 
@@ -202,12 +203,26 @@ const VegaLiteChart: React.FC<VegaLiteChartProps> = ({
     target_width === w_target && !is_too_small(w, w_target) && !is_too_large(w, w_target)
   );
 
+  const uid = Math.random().toString(36); 
+  let useCss = css; 
+  if (useCss) {
+    let obj: Stylesheet = parse(useCss); 
+    if (obj !== undefined && obj.stylesheet !== undefined) {
+      obj.stylesheet.rules = obj.stylesheet.rules.map((rule) => {
+        // @ts-ignore 
+        rule.selectors = rule.selectors.map((selector) => (`#${uid} ${selector}`)); 
+        return rule; 
+      }); 
+      useCss = stringify(obj); 
+    }
+  }
+
   // Set to true to see effects of dynamic resizing. Only for debugging issues. 
   const debug_resizing = false; 
 
   // Z-index of 1001 required to hide action button 
-  return <div ref={ref_wrapper} className="relative">
-    {css ? <style>{css}</style> : null} 
+  return <div id={uid} ref={ref_wrapper} className="relative">
+    {css ? <style>{useCss}</style> : null} 
     <VegaLite spec={cloneDeep(vega_lite_spec)} data={data} height={height} className={className}></VegaLite>
     {!is_resizing ? null : <div className={`
     absolute top-0 left-0 w-full h-full ${debug_resizing ? 'bg-red-500' : 'bg-white'} 

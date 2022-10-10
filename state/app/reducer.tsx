@@ -10,7 +10,7 @@ const pageLabels: {[key in PageName]: string} = {
     "": "Beanstalk Credit Profile", 
     "FarmersMarket": "Farmer's Market", 
     "Barn": "Barn", 
-    "Silo": "Silo", 
+    "Field": "Field", 
 }
 export const pages: Array<Page> = ALL_PAGE_NAMES.map((page_name: PageName, i: number) => ({
     id: i, name: page_name, label: pageLabels[page_name]

@@ -128,10 +128,10 @@ build-api-quiet:
 
 # Runs the google storage bucket emulator process. This command should 
 # be run when testing the application with a local backend. 
-.PHONY: local-bucket
-local-bucket: NEXT_PUBLIC_STORAGE_BUCKET_NAME=$(BUCKET_EMULATOR)
-local-bucket: STORAGE_EMULATOR_HOST=$(_STORAGE_EMULATOR_HOST)
-local-bucket: 
+.PHONY: bucket-local
+bucket-local: NEXT_PUBLIC_STORAGE_BUCKET_NAME=$(BUCKET_EMULATOR)
+bucket-local: STORAGE_EMULATOR_HOST=$(_STORAGE_EMULATOR_HOST)
+bucket-local: 
 	@python "serverless-tests/emulate_storage.py"
 
 # Deploys google cloud function locally for testing. 
@@ -143,7 +143,7 @@ define run_local_api
 endef 
 
 # Run google cloud function locally for testing with local backend. 
-# Note: Run `make local-bucket` prior to executing this command. 
+# Note: Run `make bucket-local` prior to executing this command. 
 # 		This is required so that you can view the logs for the local emulator. 
 .PHONY: api-dev-bucket-local
 api-dev-bucket-local: STORAGE_EMULATOR_HOST=$(_STORAGE_EMULATOR_HOST)

@@ -11,7 +11,7 @@ const FarmersMarketPage: NextPage = () => {
       <div className="block md:grid md:grid-cols-6 gap-4 m-4">
         <div className="col-span-6">
           <Module>
-            <Chart name="FertilizerBreakdown" />
+            <Chart name="fertilizer_breakdown" />
           </Module>
         </div>
       </div>
