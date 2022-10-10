@@ -6,18 +6,14 @@ Any priority **3** or greater should be completed before v1 launch.
 
 ## Frontend
 
-- **(4)** Modify frontend so that we organize existing set of charts into pages. 
+- **(4)** Finalize page structure before v1 launch. 
 - **(2)** Support for toggling between different subgraphs. Similar to how we do things in the frontend.
 
 ## Serverless API 
 
-- **(3)** Fork the gcp storage emulator package, and make the changes necessary to use bypass 
-  CORS issues. The work is already done here just need to setup the fork and ensure that the 
-  version in requirements-dev.txt matches the fork. 
-
 ## Charts 
 
-- **(5)** Polish up the 5-6 existing charts so they are ready for the v1 launch. 
+- **(5)** Final review of all charts before the v1 launch. 
 
 ## Infrastructure 
 
