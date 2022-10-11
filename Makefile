@@ -41,7 +41,7 @@ _STORAGE_EMULATOR_HOST=http://${STORAGE_EMULATOR_HOST_NAME}:${STORAGE_EMULATOR_P
 # Url for the local api deployment 
 LOCAL_API_URL=http://127.0.0.1:8080
 # Url for the prod api deployment 
-PROD_API_URL=https://us-east1-beanstalk-analytics.cloudfunctions.net/bean_analytics_http_handler
+PROD_API_URL=https://us-east1-beanstalk-analytics.cloudfunctions.net/bean_analytics_http_handler/
 # Build directory for source code bundle of google cloud function 
 PATH_SERVERLESS_CODE_DEPLOY=.build/serverless
 # The name of function in main.py of the build directory that is our google cloud function 

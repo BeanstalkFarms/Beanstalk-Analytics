@@ -372,6 +372,7 @@ const Chart : React.FC<{ name: string; height?: number; }> = ({ name, height = 3
             status_refresh_endpoint: new_status_refresh_endpoint, 
             status_storage_endpoint: new_status_storage_endpoint, 
             user_can_refresh: false,
+            // is_resizing: false, 
           }
         })
       })();
