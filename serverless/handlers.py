@@ -79,6 +79,6 @@ def handler_charts_refresh(request) -> Tuple[any, int]:
         except BaseException as e:
             code = 500 
             err_msg = str(e) or "Internal Server Error"
-            statuses[schema_name] = {"status": "failure", "error": err_msg}
+            statuses[schema_name] = {"status": "failure", "error": str(err_msg)}
             logger.error(err_msg)
     return statuses, code
