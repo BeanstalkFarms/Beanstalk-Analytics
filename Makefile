@@ -72,9 +72,9 @@ frontend-dev-bucket-local-%: NEXT_PUBLIC_CDN=$(_STORAGE_EMULATOR_HOST)
 frontend-dev-bucket-local-%: NEXT_PUBLIC_STORAGE_BUCKET_NAME=$(BUCKET_EMULATOR)
 
 frontend-start-bucket-gcp-%: NEXT_PUBLIC_CDN=https://storage.googleapis.com
-frontend-start-bucket-gcp-%: NEXT_PUBLIC_STORAGE_BUCKET_NAME=$(BUCKET_DEV)
+frontend-start-bucket-gcp-%: NEXT_PUBLIC_STORAGE_BUCKET_NAME=$(BUCKET_PROD)
 frontend-dev-bucket-gcp-%: NEXT_PUBLIC_CDN=https://storage.googleapis.com
-frontend-dev-bucket-gcp-%: NEXT_PUBLIC_STORAGE_BUCKET_NAME=$(BUCKET_DEV)
+frontend-dev-bucket-gcp-%: NEXT_PUBLIC_STORAGE_BUCKET_NAME=$(BUCKET_PROD)
 
 .PHONY: frontend-lint
 frontend-lint: 

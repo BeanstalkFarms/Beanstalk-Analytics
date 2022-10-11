@@ -326,7 +326,8 @@ const Chart : React.FC<{ name: string; height?: number; }> = ({ name, height = 3
           await delay(3); 
         }
         // Including the Authorization header forces the requests to do CORS preflight 
-        const headers = {"Authorization": "Bearer dummy_force_cors_preflight"}
+        // const headers = {"Authorization": "Bearer dummy_force_cors_preflight"}
+        const headers = {}; 
         let new_spec: Spec | null; 
         let new_status_refresh_endpoint: EndpointStatus;
         let new_status_storage_endpoint: EndpointStatus; 
