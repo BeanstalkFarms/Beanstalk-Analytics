@@ -401,7 +401,7 @@ def chart_stack_area_overlay_line_timeseries(
     xaxis_kwargs_default = dict(
         formatType="time", 
         ticks=False, 
-        labelExpr="timeFormat(toDate(datum.value), '%b %Y')", 
+        labelExpr="timeFormat(toDate(datum.value), '%b %e, %Y')", 
         labelOverlap=True, 
         labelSeparation=50, 
         labelPadding=5, 

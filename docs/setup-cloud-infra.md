@@ -67,6 +67,6 @@ Repeat step 2 for all buckets (dev, testing, prod).
 
 ## Cloud Function 
 
-There isn't really any setup required for the cloud function. It's implementation already 
-exists, and the methodology for deploying / re-deploying the function when it's implementation 
-changes will be covered in a separate development document. 
+Add the following IAM role to the service account that the cloud function will run as. 
+- Principal: ID for App Engine default service account. 
+- Role: `Service Account User`. 

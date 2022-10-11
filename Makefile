@@ -20,13 +20,13 @@ NEXT_PUBLIC_RPC_URL=https://eth-mainnet.gateway.pokt.network/v1/5f3453978e354ab9
 # STORAGE / BUCKETS 
 # -----------------
 # Testing bucket (used only by tests with GCP backend)
-BUCKET_TEST=beanstalk-analytics-bucket-test
+BUCKET_TEST=beanstalk-analytics-test
 # Development bucket (write objects here while developing)
-BUCKET_DEV=beanstalk-analytics-bucket-dev
+BUCKET_DEV=beanstalk-analytics-dev
 # Production bucket (backend of production application)
-BUCKET_PROD=beanstalk-analytics-bucket-prod 
+BUCKET_PROD=beanstalk-analytics-prod
 # Emulator bucket (doesn't actually exist, used when running emulator)
-BUCKET_EMULATOR=beanstalk-analytics-bucket-local
+BUCKET_EMULATOR=beanstalk-analytics-local
 # Production storage host is gcloud storage 
 STORAGE_HOST=https://storage.googleapis.com
 # Local storage host (used for testing). Private and only set in env for certain commands 

@@ -45,7 +45,7 @@ public/schemas
 .cloudstorage
 
 # Custom 
-**/*-bca*.json 
+**/*ceaec.json 
 **/__pycache__/
 .build/serverless/
 .pytest_cache/

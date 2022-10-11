@@ -6,21 +6,19 @@ Any priority **3** or greater should be completed before v1 launch.
 
 ## Frontend
 
-- **(4)** Finalize page structure before v1 launch. 
-- **(2)** Support for toggling between different subgraphs. Similar to how we do things in the frontend.
+- **(2)** Fix css styling of tooltips. Can be done through custom vegaEmbed themes but this 
+  is causing an issue with re-renders that needs to be debugged. 
+- **(2)** Support for toggling between different subgraphs, similar to how we do things in the frontend.
 
 ## Serverless API 
 
 ## Charts 
 
-- **(5)** Final review of all charts before the v1 launch. 
-
 ## Infrastructure 
 
 - **(3)** Switch from infra on my personal GCP account to infra using the BF GCP account. 
   - Deploy both prod and testing infra. 
-- **(3)** Review of IAM policies and infra permissions to ensure things are secure.
-- **(1)** Tear down the load balancer and CDN in my personal gcloud account that were setup for testing. 
+- **(2)** Application security review (IAM, permissions, etc.). 
 
 ## Devops 
 
@@ -29,7 +27,7 @@ Any priority **3** or greater should be completed before v1 launch.
 ## Documentation 
 
 - **(3)** Full documentation review for correctness. 
-- **(3)** Update the notion document that serves as the roadmap for charts on the website. TODO: add a link here. 
+- **(2)** Update the notion document that serves as the roadmap for charts on the website. 
 - **(1)** Contributor facing documentation.  
 
 ## Others 

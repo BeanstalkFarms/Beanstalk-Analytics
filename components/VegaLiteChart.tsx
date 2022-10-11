@@ -3,7 +3,6 @@ import useSize from '@react-hook/size';
 import { useEffect, useReducer, useRef, useLayoutEffect } from "react";
 import { VegaLite } from 'react-vega';
 import { set, cloneDeep, omit } from "lodash";
-import { parse, stringify, Stylesheet } from "css"; 
 import useInterval from '../hooks/useInterval';
 
 export type WidthPaths = Array<{ path: Array<string | number>, factor: number, value: number }>; 
@@ -163,6 +162,7 @@ const VegaLiteChart: React.FC<VegaLiteChartProps> = ({
   const data = spec['datasets'];
   
   const ref_wrapper = useRef<HTMLDivElement>(null); 
+  const [uid, setUid] = useState<string>("uid" + Math.random().toString(10).split(".")[1]); 
   const [w, h] = useSize(ref_wrapper);
   const [resize_toggle, set_resize_toggle] = useState<boolean>(false); 
   const [state, dispatch] = useReducer(reducer, { 
@@ -203,31 +203,46 @@ const VegaLiteChart: React.FC<VegaLiteChartProps> = ({
     target_width === w_target && !is_too_small(w, w_target) && !is_too_large(w, w_target)
   );
 
-  const uid = Math.random().toString(36); 
+  // const uid = "catdog"; 
+  // console.log(uid); 
   let useCss = css; 
   if (useCss) {
-    let obj: Stylesheet = parse(useCss); 
-    if (obj !== undefined && obj.stylesheet !== undefined) {
-      obj.stylesheet.rules = obj.stylesheet.rules.map((rule) => {
-        // @ts-ignore 
-        rule.selectors = rule.selectors.map((selector) => (`#${uid} ${selector}`)); 
-        return rule; 
-      }); 
-      useCss = stringify(obj); 
+    let cssParts = useCss.split(/[{}]/).filter(String); 
+    if (cssParts.length % 2 !== 0) {
+      cssParts.pop(); 
     }
+    cssParts = cssParts.map(function(s, i) {
+      if (i % 2 === 0) {
+        return `#${uid} ${s.trim()} `; 
+      } else {
+        return `{${s.trim()}}\n`
+      }
+    }); 
+    // cssParts.push(`#vg-tooltip-element.vg-tooltip.catdog-theme {
+    //   color: red;
+    // }`)
+    useCss = cssParts.join(""); 
   }
 
   // Set to true to see effects of dynamic resizing. Only for debugging issues. 
   const debug_resizing = false; 
 
   // Z-index of 1001 required to hide action button 
-  return <div id={uid} ref={ref_wrapper} className="relative">
-    {css ? <style>{useCss}</style> : null} 
-    <VegaLite spec={cloneDeep(vega_lite_spec)} data={data} height={height} className={className}></VegaLite>
-    {!is_resizing ? null : <div className={`
-    absolute top-0 left-0 w-full h-full ${debug_resizing ? 'bg-red-500' : 'bg-white'} 
-    flex items-center justify-center z-[1001]`}/>}
-  </div>;
+  return <React.Fragment>
+    {useCss ? <style>{useCss}</style> : null} 
+    <div id={uid} ref={ref_wrapper} className="relative">
+      <VegaLite 
+      spec={cloneDeep(vega_lite_spec)} 
+      data={data} 
+      height={height} 
+      className={className}
+      // tooltip={{"theme": uid}} // when this is included, weird stuff happens 
+      ></VegaLite>
+      {!is_resizing ? null : <div className={`
+      absolute top-0 left-0 w-full h-full ${debug_resizing ? 'bg-red-500' : 'bg-white'} 
+      flex items-center justify-center z-[1001]`}/>}
+    </div>
+  </React.Fragment>;
 
 }; 
 

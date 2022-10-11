@@ -15,7 +15,7 @@ const Header : React.FC<{
         <img src="/beanstalk.svg" className="h-6" /> 
       </div>
       <div className="col-span-2 flex items-center justify-end">
-        ???
+        
       </div>
     </div>
   )
