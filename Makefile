@@ -40,6 +40,8 @@ _STORAGE_EMULATOR_HOST=http://${STORAGE_EMULATOR_HOST_NAME}:${STORAGE_EMULATOR_P
 # --------------
 # Url for the local api deployment 
 LOCAL_API_URL=http://127.0.0.1:8080
+# Url for the prod api deployment 
+PROD_API_URL=https://us-east1-beanstalk-analytics.cloudfunctions.net/bean_analytics_http_handler
 # Build directory for source code bundle of google cloud function 
 PATH_SERVERLESS_CODE_DEPLOY=.build/serverless
 # The name of function in main.py of the build directory that is our google cloud function 
@@ -60,33 +62,54 @@ RPATH_NOTEBOOKS=$(RPATH_NOTEBOOKS_PROD)
 # -----------------------------------------------------------------------------------------------
 # RULES - FRONTEND 
 # -----------------------------------------------------------------------------------------------
-frontend-dev-%: NEXT_PUBLIC_API_URL=$(LOCAL_API_URL)
-frontend-start-%: NEXT_PUBLIC_API_URL=$(LOCAL_API_URL)
 
-frontend-%-bucket-local: NEXT_PUBLIC_CDN=$(_STORAGE_EMULATOR_HOST)
-frontend-%-bucket-local: NEXT_PUBLIC_STORAGE_BUCKET_NAME=$(BUCKET_EMULATOR)
+frontend-%-api-local: NEXT_PUBLIC_API_URL=$(LOCAL_API_URL)
+frontend-%-api-gcp: NEXT_PUBLIC_API_URL=$(PROD_API_URL)
 
-frontend-%-bucket-gcp: NEXT_PUBLIC_CDN=https://storage.googleapis.com
-frontend-%-bucket-gcp: NEXT_PUBLIC_STORAGE_BUCKET_NAME=$(BUCKET_DEV)
+frontend-start-bucket-local-%: NEXT_PUBLIC_CDN=$(_STORAGE_EMULATOR_HOST)
+frontend-start-bucket-local-%: NEXT_PUBLIC_STORAGE_BUCKET_NAME=$(BUCKET_EMULATOR)
+frontend-dev-bucket-local-%: NEXT_PUBLIC_CDN=$(_STORAGE_EMULATOR_HOST)
+frontend-dev-bucket-local-%: NEXT_PUBLIC_STORAGE_BUCKET_NAME=$(BUCKET_EMULATOR)
+
+frontend-start-bucket-gcp-%: NEXT_PUBLIC_CDN=https://storage.googleapis.com
+frontend-start-bucket-gcp-%: NEXT_PUBLIC_STORAGE_BUCKET_NAME=$(BUCKET_DEV)
+frontend-dev-bucket-gcp-%: NEXT_PUBLIC_CDN=https://storage.googleapis.com
+frontend-dev-bucket-gcp-%: NEXT_PUBLIC_STORAGE_BUCKET_NAME=$(BUCKET_DEV)
 
 .PHONY: frontend-lint
 frontend-lint: 
 	@yarn lint 
 
-.PHONY: frontend-dev-bucket-local
-frontend-dev-bucket-local: 
+.PHONY: frontend-dev-bucket-local-api-local
+frontend-dev-bucket-local-api-local: 
 	@yarn dev 
 
-.PHONY: frontend-dev-bucket-gcp
-frontend-dev-bucket-gcp: 
+.PHONY: frontend-dev-bucket-gcp-api-local
+frontend-dev-bucket-gcp-api-local: 
 	@yarn dev 
 
-.PHONY: frontend-start-bucket-local
-frontend-start-bucket-local: 
+.PHONY: frontend-start-bucket-local-api-local
+frontend-start-bucket-local-api-local: 
 	@yarn start 
 
-.PHONY: frontend-start-bucket-gcp
-frontend-start-bucket-gcp: 
+.PHONY: frontend-start-bucket-gcp-api-local
+frontend-start-bucket-gcp-api-local:  
+	@yarn start 
+
+.PHONY: frontend-dev-bucket-local-api-gcp
+frontend-dev-bucket-local-api-gcp: 
+	@yarn dev 
+
+.PHONY: frontend-dev-bucket-gcp-api-gcp
+frontend-dev-bucket-gcp-api-gcp: 
+	@yarn dev 
+
+.PHONY: frontend-start-bucket-local-api-gcp
+frontend-start-bucket-local-api-gcp: 
+	@yarn start 
+
+.PHONY: frontend-start-bucket-gcp-api-gcp
+frontend-start-bucket-gcp-api-gcp:  
 	@yarn start 
 
 .PHONY: frontend-build
