@@ -46,7 +46,7 @@ class QueryManager:
     sg: Subgrounds
     bs: Subgraph 
 
-    def query_seasons(self, extra_cols=None, where=None): 
+    def query_seasons(self, extra_cols=None, **kwargs): 
         """Returns dataframe of form 
         
         #   Column     Dtype         
@@ -61,9 +61,10 @@ class QueryManager:
         precisions = {
             "beans": 1e6
         }
+        query_kwargs_default = {"orderBy": "season", "orderDirection": "asc"}
+        query_kwargs = {**query_kwargs_default, **kwargs}
         extra_cols = extra_cols or []
-        where = where or {}
-        q = bs.Query.seasons(first=100000, where=where, orderBy="season", orderDirection="asc")
+        q = bs.Query.seasons(first=100000, **query_kwargs)
         df = sg.query_df(
             [
                 q.season, 
@@ -333,7 +334,7 @@ class QueryManager:
         df = (
             df
             .sort_values("timestamp")
-            .reset_index(drop=True)
+            .reset_index()
             .groupby('season')
             .agg({k: v for k, v in aggs.items() if k in df.columns})
             .reset_index()
