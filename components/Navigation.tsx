@@ -7,7 +7,6 @@ import { Page, pages } from "../state/app/reducer";
 
 
 const Navigation: React.FC<{}> = ({}) => {
-
   const router = useRouter()
   const appContext: IAppContext = useContext(AppContext) as IAppContext;
   const { state, dispatch } = appContext; 

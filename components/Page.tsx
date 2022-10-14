@@ -1,18 +1,24 @@
+import Head from "next/head";
 import React from "react";
 import Header from "./Header";
 
 const Page : React.FC<{
   children: React.ReactNode;
-  rightHeader?: React.ReactNode;
+  title?: string
 }> = ({
   children,
-  rightHeader
+  title
 }) => {
   return (
-    <div>
+    <>
+      <Head>
+        <title>{title ? `${title} | ` : ''}Beanstalk Analytics</title>
+      </Head>
       <Header />
-      {children}
-    </div>
+      <div className="page">
+        {children}
+      </div>
+    </>
   )
 }
 

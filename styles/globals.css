@@ -2,12 +2,28 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face {
+  font-family: 'Futura PT';
+  src: url('./fonts/FuturaPT/FuturaPTMedium.otf');
+  font-weight: 400;
+}
+
+@font-face {
+  font-family: 'Futura PT';
+  src: url('./fonts/FuturaPT/FuturaPTBold.otf');
+  font-weight: 600;
+}
+
+
 html,
 body {
   padding: 0;
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen,
-    Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue, sans-serif;
+  /* font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen,
+    Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue, sans-serif; */
+  font-family: 'Futura PT';
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 a {
@@ -18,3 +34,14 @@ a {
 * {
   box-sizing: border-box;
 }
+
+/* .page {
+  display: block;
+  background-image: url('./img/interface/bg/default-gradient.png');
+  background-attachment: fixed;
+  background-position: bottom center;
+  background-size: 100%;
+  background-repeat: no-repeat;
+  width: '100%';
+  min-height: calc(100vh - 60px);
+} */

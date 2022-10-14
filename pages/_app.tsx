@@ -9,9 +9,11 @@ import { initialState, State } from '../state/app/reducer';
 function MyApp({ Component, pageProps }: AppProps) {
   const [state, dispatch] = useReducer(reducer, initialState);
 
-  return <AppContext.Provider value={{ state, dispatch }}>
-    <Component {...pageProps} />
-  </AppContext.Provider>
+  return (
+    <AppContext.Provider value={{ state, dispatch }}>
+      <Component {...pageProps} />
+    </AppContext.Provider>
+  );
 }
 
 export default MyApp

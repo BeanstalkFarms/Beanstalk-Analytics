@@ -1,7 +1,8 @@
 import React from 'react';
 import { PropsWithChildren, useEffect, useReducer, useRef } from "react";
 import { Popover } from '@headlessui/react' 
-import { isNumber } from "lodash";
+import isNumber from "lodash/isNumber";
+import kebabCase from 'lodash/kebabCase';
 
 import useInterval from "../hooks/useInterval";
 import VegaLiteChart, { WidthPaths } from "./VegaLiteChart"; 
@@ -147,11 +148,11 @@ const ChartInfoPopover: React.FC<ChartInfoPopoverProps> = ({
       {({ open }) => (
         <>
           {/* ui-not-open:!outline-0 ui-open:!border-slate-200 */}
-          <Popover.Button className={`mt-1 mr-2`}>
+          <Popover.Button>
             {children}
           </Popover.Button>
           {/* Vega lite action button has zIndex of 1000 so this ensures that popup overlays it */}
-          <Popover.Panel className="absolute right-2 top-12 z-10 w-96 z-[1005]">
+          <Popover.Panel className="absolute right-0 top-10 w-96 z-[1005]">
           {({ close }) => (
             <div className="block border border-solid border-sky-500 rounded-md p-3 bg-slate-50">
               {/* Chart metadata */}
@@ -308,7 +309,17 @@ function reducer(state: ChartState, action: Action): ChartState {
   }
 }
 
-const Chart : React.FC<{ name: string; height?: number; }> = ({ name, height = 300 }) => {
+const Chart : React.FC<{
+  name: string;
+  title: string;
+  description?: string;
+  height?: number;
+}> = ({
+  name,
+  title,
+  description,
+  height = 300
+}) => {
 
   const [state, dispatch] = useReducer(reducer, initialState); 
   const ref_header = useRef(null); 
@@ -417,19 +428,35 @@ const Chart : React.FC<{ name: string; height?: number; }> = ({ name, height = 3
     if (user_can_refresh) dispatch({type: "start-loading"});
   }; 
 
-  return <div className="overflow-hidden">
-    {/* Chart Header */}
-    <div ref={ref_header} className="grid gap-4 grid-cols-2 grid-rows-1">
-      <div className="p-2"><h4 className="font-bold">{name}</h4></div>
-      <div className="flex justify-end">
-        <ChartInfoPopover {...state} refreshChart={refreshChart}>
-          <ChartStatusBox {...state}/>
-        </ChartInfoPopover>
+  const slug = kebabCase(title);
+
+  return (
+    <div className="overflow-hidden">
+      <a id={slug} />
+      {/* Chart Header */}
+      <div ref={ref_header} className="border-2 border-[#DAEBF7] rounded-lg bg-[#F6FAFE] px-4 py-2">
+        <div className="grid gap-1 grid-cols-2 grid-rows-1 items-center">
+          <div>
+            <a href={`#${slug}`} className="hover:underline">
+              <h4 className="text-lg font-bold">{title}</h4>
+            </a>
+          </div>
+          <div className="flex justify-end">
+            <ChartInfoPopover {...state} refreshChart={refreshChart}>
+              <ChartStatusBox {...state}/>
+            </ChartInfoPopover>
+          </div>
+        </div>
+        {description && (
+          <p className="text-gray-600">{description}</p>
+        )}
+      </div>
+      {/* Chart body */}
+      <div className="mt-4">
+        {chartBody}
       </div>
     </div>
-    {/* Chart body */}
-    {chartBody}
-  </div>;
+  );
 
 }
 
