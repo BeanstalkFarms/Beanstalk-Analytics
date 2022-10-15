@@ -6,6 +6,8 @@ from pandas import DataFrame
 from IPython.display import display 
 from IPython.core.display import HTML
 
+from .constants import ADDRS_SILO_TOKENS, DECIMALS_SILO_TOKENS
+
 
 def is_number(v): 
     return type(v) == int or type(v) == float 
@@ -49,6 +51,17 @@ def remove_prefixes(df: DataFrame, prefixes: List[str]):
     for p in prefixes: 
         df = remove_prefix(df, p)
     return df 
+
+
+def add_silo_token_name_adjust_precision(df, token_col, token_amount_cols, token_name_col="silo_token_name"):
+    """Creates a column for silo token name by performing a lookup based on address. 
+    Modifies the amount related field for each silo token by a token specific precision. 
+    """
+    token_names = dict_invert(ADDRS_SILO_TOKENS) 
+    df[token_name_col] = df[token_col].apply(lambda token_addr: token_names[token_addr]) 
+    for token_name in ADDRS_SILO_TOKENS:
+        row_mask = df[token_name_col] == token_name
+        df.loc[row_mask, token_amount_cols] = df.loc[row_mask, token_amount_cols] / DECIMALS_SILO_TOKENS[token_name]
 
 
 def ddf(df: DataFrame, **kwargs): 
