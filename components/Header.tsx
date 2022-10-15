@@ -26,7 +26,7 @@ const Header : React.FC<{
   children
 }) => {
   return (
-    <div className="flex flex-row px-4 py-2 border-b">
+    <div className="flex flex-row px-4 py-2 border-b border-gray-200">
       <div className="flex-1 flex items-center justify-start md:space-x-5 space-x-2">
         <NavLink href="/" className="md:inline-block hidden">
           <img alt="" src="/beanstalk.svg" className="h-5" /> 
