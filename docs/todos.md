@@ -16,17 +16,12 @@ Any priority **3** or greater should be completed before v1 launch.
 
 ## Infrastructure 
 
-- **(3)** Switch from infra on my personal GCP account to infra using the BF GCP account. 
-  - Deploy both prod and testing infra. 
 - **(2)** Application security review (IAM, permissions, etc.). 
 
 ## Devops 
 
-- **(3)** Run end to end tests of all makefile commands before v1 launch. 
-
 ## Documentation 
 
-- **(3)** Full documentation review for correctness. 
 - **(2)** Update the notion document that serves as the roadmap for charts on the website. 
 - **(1)** Contributor facing documentation.  
 

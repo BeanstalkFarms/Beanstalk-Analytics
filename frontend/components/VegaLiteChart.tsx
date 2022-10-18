@@ -197,7 +197,7 @@ const VegaLiteChart: React.FC<VegaLiteChartProps> = ({
       target_width === w_target && !is_too_small(w, w_target) && !is_too_large(w, w_target)
     );
     setResizing(is_resizing); 
-  }, [w, target_width, w_target]); 
+  }, [w, target_width, w_target, setResizing]); 
 
   const is_resizing = !(
     target_width === w_target && !is_too_small(w, w_target) && !is_too_large(w, w_target)

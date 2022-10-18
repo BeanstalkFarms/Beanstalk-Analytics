@@ -45,6 +45,8 @@ public/schemas
 .cloudstorage
 
 # Custom 
+**/node_modules
+**/.next 
 **/*ceaec.json 
 **/__pycache__/
 .build/serverless/

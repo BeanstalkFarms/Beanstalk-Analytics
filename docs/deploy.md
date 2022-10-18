@@ -6,14 +6,14 @@ Prior to deploying a new version of the cloud function, you must run the unit te
 
 The unit test suite consists of two test files each using different environment configurations
 
-- `serverless-tests/test_api_emulator.py`
+- `backend/tests/test_api_emulator.py`
   - Uses the local storage bucket. 
-  - Uses test notebooks in `serverless/notebooks/testing/`. 
+  - Uses test notebooks in `backend/src/notebooks/testing/`. 
   - Checks that all API routes correctly handle incoming requests. 
   - Checks that the specs returned by the testing notebooks contain expected data. 
-- `serverless-tests/test_api_gcp.py`
+- `backend/tests/test_api_gcp.py`
   - Uses the GCP testing bucket. 
-  - Uses the prod notebooks in `serverless/notebooks/prod/`. 
+  - Uses the prod notebooks in `backend/src/notebooks/prod/`. 
   - Force refreshes all possible production notebooks through the API.
   - Validates that the objects produced to the test bucket have the expected structure, 
   and that the schema portion of the object is a valid vega-lite schema. 

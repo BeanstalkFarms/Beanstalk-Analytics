@@ -1,4 +1,6 @@
-# Exports all environment variables from .env into makefile environment 
+# Exports all environment variables from .env into makefile environment. 
+# The .env file should contain private environment variables, while we 
+# define all public environment variables within this file. 
 # https://unix.stackexchange.com/questions/235223/makefile-include-env-file
 include .env
 export
@@ -47,7 +49,7 @@ PATH_SERVERLESS_CODE_DEPLOY=.build/serverless
 # The name of function in main.py of the build directory that is our google cloud function 
 CLOUD_FUNCTION_NAME=bean_analytics_http_handler
 # Directory that serves as source for serverless build. We copy contents from here to the build directory. 
-PATH_SERVERLESS_CODE_DEV=serverless
+PATH_SERVERLESS_CODE_DEV=backend/src
 # Relative path within build directory to notebooks used for unit tests 
 RPATH_NOTEBOOKS_TEST=notebooks/testing
 # Relative path within build directory to notebooks used for production backend 
@@ -78,45 +80,45 @@ frontend-dev-bucket-gcp-%: NEXT_PUBLIC_STORAGE_BUCKET_NAME=$(BUCKET_PROD)
 
 .PHONY: frontend-lint
 frontend-lint: 
-	@yarn lint 
+	@cd frontend; yarn lint; 
 
 .PHONY: frontend-dev-bucket-local-api-local
 frontend-dev-bucket-local-api-local: 
-	@yarn dev 
+	@cd frontend; yarn dev; 
 
 .PHONY: frontend-dev-bucket-gcp-api-local
 frontend-dev-bucket-gcp-api-local: 
-	@yarn dev 
+	@cd frontend; yarn dev; 
 
 .PHONY: frontend-start-bucket-local-api-local
 frontend-start-bucket-local-api-local: 
-	@yarn start 
+	@cd frontend; yarn start; 
 
 .PHONY: frontend-start-bucket-gcp-api-local
 frontend-start-bucket-gcp-api-local:  
-	@yarn start 
+	@cd frontend; yarn start; 
 
 .PHONY: frontend-dev-bucket-local-api-gcp
 frontend-dev-bucket-local-api-gcp: 
-	@yarn dev 
+	@cd frontend; yarn dev; 
 
 .PHONY: frontend-dev-bucket-gcp-api-gcp
 frontend-dev-bucket-gcp-api-gcp: 
-	@yarn dev 
+	@cd frontend; yarn dev; 
 
 .PHONY: frontend-start-bucket-local-api-gcp
 frontend-start-bucket-local-api-gcp: 
-	@yarn start 
+	@cd frontend; yarn start; 
 
 .PHONY: frontend-start-bucket-gcp-api-gcp
 frontend-start-bucket-gcp-api-gcp:  
-	@yarn start 
+	@cd frontend; yarn start; 
 
 .PHONY: frontend-build
 frontend-build: NEXT_PUBLIC_CDN=https://storage.googleapis.com
 frontend-build: NEXT_PUBLIC_STORAGE_BUCKET_NAME=$(BUCKET_PROD)
 frontend-build: 
-	@yarn build 
+	@cd frontend; yarn build; 
 
 # -----------------------------------------------------------------------------------------------
 # RULES - BACKEND 
@@ -155,14 +157,14 @@ build-api-quiet:
 bucket-local: NEXT_PUBLIC_STORAGE_BUCKET_NAME=$(BUCKET_EMULATOR)
 bucket-local: STORAGE_EMULATOR_HOST=$(_STORAGE_EMULATOR_HOST)
 bucket-local: 
-	@python "serverless-tests/emulate_storage.py"
+	@python "backend/tests/emulate_storage.py"
 
 # Deploys google cloud function locally for testing. 
 # If env variable STORAGE_EMULATOR_HOST is set we use a local backend storage emulator. 
 # If env variable STORAGE_EMULATOR_HOST is not set we use a GCP bucket as the backend. 
 define run_local_api
-	chmod +x ./scripts/shell/test-api.sh; \
-		scripts/shell/test-api.sh; 
+	chmod +x ./scripts/shell/run-api.sh; \
+		scripts/shell/run-api.sh; 
 endef 
 
 # Run google cloud function locally for testing with local backend. 
@@ -219,14 +221,14 @@ unit-test-api-emulator: NEXT_PUBLIC_STORAGE_BUCKET_NAME=$(BUCKET_EMULATOR)
 unit-test-api-emulator: RPATH_NOTEBOOKS=$(PATH_SERVERLESS_CODE_DEPLOY)/$(RPATH_NOTEBOOKS_TEST)
 unit-test-api-emulator: build-api-quiet
 	@if [ -d ".cloudstorage " ]; then rmdir ".cloudstorage"; fi
-	eval "pytest ./serverless-tests/test_api_emulator.py ${UNIT_TEST_API_ARGS}"
+	eval "pytest ./backend/tests/test_api_emulator.py ${UNIT_TEST_API_ARGS}"
 	@if [ -d ".cloudstorage " ]; then rmdir ".cloudstorage"; fi
 
 .PHONY: unit-test-api-gcp
 unit-test-api-gcp: NEXT_PUBLIC_STORAGE_BUCKET_NAME=$(BUCKET_TEST)
 unit-test-api-gcp: RPATH_NOTEBOOKS=$(PATH_SERVERLESS_CODE_DEPLOY)/$(RPATH_NOTEBOOKS_PROD)
 unit-test-api-gcp: build-api-quiet
-	eval "pytest ./serverless-tests/test_api_gcp.py ${UNIT_TEST_API_ARGS}"
+	eval "pytest ./backend/tests/test_api_gcp.py ${UNIT_TEST_API_ARGS}"
 
 .PHONY: unit-test-api
 unit-test-api: unit-test-api-emulator unit-test-api-gcp
@@ -266,13 +268,13 @@ deploy-api: build-api
 .PHONY: profile_notebooks 
 profile_notebooks: RPATH_NOTEBOOKS=$(PATH_SERVERLESS_CODE_DEV)/$(RPATH_NOTEBOOKS_PROD)
 profile_notebooks: 
-	@python serverless/script_profile_notebooks.py
+	@python backend/src/script_profile_notebooks.py
 
 
-.PHONY: execute_notebooks 
-execute_notebooks: RPATH_NOTEBOOKS=$(PATH_SERVERLESS_CODE_DEPLOY)/$(RPATH_NOTEBOOKS_PROD)
-execute_notebooks: build-api-quiet
-	@python serverless/script_execute_notebooks.py \
-		--all \
-		--output-dir serverless/notebooks/dev/layout-sizing/schemas \
+# .PHONY: execute_notebooks 
+# execute_notebooks: RPATH_NOTEBOOKS=$(PATH_SERVERLESS_CODE_DEPLOY)/$(RPATH_NOTEBOOKS_PROD)
+# execute_notebooks: build-api-quiet
+# 	@python serverless/script_execute_notebooks.py \
+# 		--all \
+# 		--output-dir backend/src/notebooks/dev/layout-sizing/schemas \
 		

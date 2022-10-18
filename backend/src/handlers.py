@@ -4,7 +4,6 @@ import logging
 from typing import Tuple  
 
 from utils_serverless.utils import StorageClient, NotebookRunner
-from utils_notebook.vega import compute_width_paths
 
 
 logger = logging.getLogger(__name__)

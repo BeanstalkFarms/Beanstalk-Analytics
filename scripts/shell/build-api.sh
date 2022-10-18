@@ -10,7 +10,7 @@ if [ $BUILD_API_VERBOSE = "true" ]; then
     echo "Creating serverless code build"; 
     echo "------------------------------------------------------------------------"; 
     python scripts/python/create_serverless_code.py; 
-    cp requirements.txt "${PATH_SERVERLESS_CODE_DEPLOY}/requirements.txt"
+    cp backend/requirements.txt "${PATH_SERVERLESS_CODE_DEPLOY}/requirements.txt"
     echo "------------------------------------------------------------------------"; 
     echo "Showing build directory structure (Taking into account .gcloudignore)"; 
     echo "------------------------------------------------------------------------"; 
@@ -29,5 +29,5 @@ if [ $BUILD_API_VERBOSE = "true" ]; then
         --paths-show "${build_upload_files_csv}"
 else 
     python scripts/python/create_serverless_code.py --quiet 
-    cp requirements.txt "${PATH_SERVERLESS_CODE_DEPLOY}/requirements.txt"
+    cp backend/requirements.txt "${PATH_SERVERLESS_CODE_DEPLOY}/requirements.txt"
 fi

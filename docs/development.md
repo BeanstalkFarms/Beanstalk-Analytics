@@ -21,9 +21,9 @@ Within this file, define the following key value pairs.
   incorrectly. I've implemented a "safe" wrapper around this method in `scripts/python/safe_rmtree.py` 
   that ensures that this environment variable is set prior to performing any operations. 
 - `GOOGLE_APPLICATION_CREDENTIALS`: The name of the service account credentials file. This 
-  File should exist both in the root directory, and also in `serverless`, but the value of 
+  File should exist both in the root directory, and also in `backend/src`, but the value of 
   this variable should point to the one in the root directory (i.e. it is just the filename). 
-  The pattern `**/*-bca*.json` in `.gitignore` should prevent any service account key file 
+  The pattern `**/*ceaec.json ` in `.gitignore` should prevent any service account key file 
   created by developers from being versioned, but take extra precautions here. 
 
 ## Frontend Overview 
@@ -45,7 +45,7 @@ yarn
 
 The application uses a single serverless google cloud function to serve all client requests.
 
-- This handler is called `bean_analytics_http_handler` and it exists in `serverless/main.py`.
+- This handler is called `bean_analytics_http_handler` and it exists in `backend/src/main.py`.
 
 This function serves as a router that delegates to internal handlers to 
 service different types of requests. Here are the currently supported routes: 
@@ -57,7 +57,7 @@ service different types of requests. Here are the currently supported routes:
   - The schema is recomputed when a schema does not exist, is older than some number of 
   seconds, or is force refreshed. 
   - The schemas are computed by running jupyter notebooks that exist within 
-  `serverless/notebooks/prod`. When building the code bundle to deploy the serverless 
+  `backend/src/notebooks/prod`. When building the code bundle to deploy the serverless 
   function, these notebooks are processed into a modified (and more efficient) form. 
 
 ### Backend Environment and Dependencies 
@@ -85,12 +85,12 @@ conda deactivate
 ```
 
 Within your conda (or other platform) virtual environment, install the dependencies in both 
-`requirements.txt` and `requirements.dev.txt`. 
+`backend/requirements.txt` and `backend/requirements.dev.txt`. 
 
 I personally use pip for this 
 
 ```bash 
-python -m pip install -r requirements.txt -r requirements-dev.txt
+python -m pip install -r backend/requirements.txt -r backend/requirements-dev.txt
 ```
 
 Whenever you are developing the application, I recommend having this environment active. 
@@ -98,7 +98,7 @@ Many `Makefile` commands require it.
 
 ### Backend (API) Builds 
 
-The code in `serverless` serves as the source code for our google cloud function. However, 
+The code in `backend/src` serves as the source code for our google cloud function. However, 
 the version of this code that we end up deploying is a little different from the source. 
 During the build process, we do the following. 
 
