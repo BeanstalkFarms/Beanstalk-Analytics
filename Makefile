@@ -2,8 +2,10 @@
 # The .env file should contain private environment variables, while we 
 # define all public environment variables within this file. 
 # https://unix.stackexchange.com/questions/235223/makefile-include-env-file
-include .env
-export
+ifneq (,$(wildcard ./.env))
+	include .env
+	export
+endif
 
 # ENVIRONMENT VARIABLES 
 # -----------------------------------------------------------------------------------------------
