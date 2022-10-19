@@ -118,7 +118,7 @@ frontend-start-bucket-gcp-api-gcp:
 frontend-build: NEXT_PUBLIC_CDN=https://storage.googleapis.com
 frontend-build: NEXT_PUBLIC_STORAGE_BUCKET_NAME=$(BUCKET_PROD)
 frontend-build: 
-	@cd frontend; yarn build; 
+	@cd frontend; yarn && yarn build; 
 
 # -----------------------------------------------------------------------------------------------
 # RULES - BACKEND 
