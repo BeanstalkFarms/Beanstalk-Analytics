@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react"
 import flatten from 'lodash/flatten';
 import { ethers } from "ethers";
-import contracts from "../lib/contracts"
-import { provider } from "../lib/provider";
-import { TypedEvent } from "../generated/common";
+import contracts from "../../lib/contracts"
+import { provider } from "../../lib/provider";
+import { TypedEvent } from "../../generated/common";
 
 const NUM_SEASONS = 5;
 const SECONDS_PER_HOUR  = 60*60;
