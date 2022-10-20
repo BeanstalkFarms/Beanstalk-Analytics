@@ -1,5 +1,6 @@
 import React from "react";
 import Header from "./Header";
+import Footer from "./Footer";
 
 const Page : React.FC<{
   children: React.ReactNode;
@@ -12,6 +13,7 @@ const Page : React.FC<{
     <div>
       <Header />
       {children}
+      <Footer />
     </div>
   )
 }
