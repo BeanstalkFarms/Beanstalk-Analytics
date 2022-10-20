@@ -1,6 +1,7 @@
 import Head from "next/head";
 import React from "react";
 import Header from "./Header";
+import Footer from "./Footer";
 
 const Page : React.FC<{
   children: React.ReactNode;
@@ -18,13 +19,15 @@ const Page : React.FC<{
       <div className="page">
         {children}
       </div>
-      <div className="border-t border-gray-200 p-4">
-        <div className="grid grid-cols-3">
-          <div>
-            <a href="https://bean.money">bean.money</a>
-          </div>
-        </div>
-      </div>
+      <Footer />
+
+      {/*<div className="border-t border-gray-200 p-4">*/}
+      {/*  <div className="grid grid-cols-3">*/}
+      {/*    <div>*/}
+      {/*      <a href="https://bean.money">bean.money</a>*/}
+      {/*    </div>*/}
+      {/*  </div>*/}
+      {/*</div>*/}
     </>
   )
 }
