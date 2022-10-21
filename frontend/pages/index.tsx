@@ -20,12 +20,12 @@ const WideLink : React.FC<React.PropsWithChildren<{ href: string }>> = ({ href, 
 const Home: NextPage = () => {
   return (
     <Page>
-      <div className="md:px-6 md:py-6">
+      <div className="md:px-6 py-6">
         <h1 className="text-4xl font text-center">
           Explore Beanstalk protocol analytics
         </h1>
       </div>
-      <div className="flex flex-col items-center justify-center mb-6">
+      <div className="flex flex-col items-center justify-center">
         <div>
           <WideLink href="/credit-profile#credit-profile">
             Credit Profile
