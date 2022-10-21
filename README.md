@@ -1,6 +1,6 @@
 <img src="public/bean-logo-circled.svg" alt="Beanstalk logo" align="right" width="120" />
 
-## Beanstalk-Data-Playground
+# Beanstalk-Data-Playground
 
 [![Discord][discord-badge]][discord-url]
 
@@ -9,48 +9,30 @@
 
 **Beanstalk analytics and protocol metrics: [analytics.bean.money](https://analytics.bean.money)**
 
-## Getting started
+## Application Architecture 
 
-Install Python dependencies with `pipenv`:
+This application consists of
 
-```
-pipenv install
-# Or: python3 -m pipenv install
-```
+- A frontend (next.js).
+  - The frontend ingests and visualizes data created by the serverless backend.
+- Google Cloud Platform Infrastructure 
+  - A GCP storage bucket containing vega-lite schemas and other application data.  
+- A serverless api
+  - Responds to frontend requests, manages objects in the storage bucket. 
 
-Install Next.js dependencies:
+## Contributor Documentation 
 
-```
-yarn
-```
+These links are for developers who wish to contribute new charts to the 
+analytics website. 
 
-Setup local environment:
+TODO: Fill in some documentation on this topic. 
 
-1. `cp .env.example .env`
-2. If using an emulator for development, set `NEXT_PUBLIC_CDN` and `STORAGE_EMULATOR_HOST` to point to a local Cloud Storage emulator. A simple proxy is provided via `yarn emulate`, see `test/emulate.py` for more.
-3. If testing uploads to a live Cloud Storage bucket: set `NEXT_PUBLIC_STORAGE_BUCKET_NAME` and `GOOGLE_APPLICATION_CREDENTIALS`. You'll need to create a bucket which allows public and a service account with permission to upload files, see below.
+## Developer Documentation 
 
+These links are for developers working on the full-stack application.
 
-Run the local development environment:
+Right now, this really just for **TBIQ**. 
 
-```
-yarn dev     # Runs the frontend at localhost:3000
-yarn emulate # Runs the gcloud emulator at localhost:9023
-```
-
-## Setting up a test bucket
-
-1. Set up a Google Cloud account.
-2. Create a new project.
-3. Create a storage bucket. Uncheck the option that prevents the bucket from being exposed to publicly.
-4. Add a role for `allUsers` that enables viewing objects.
-5. Create a service account with permissions to upload to the bucket:
-  a. Create a service account.
-  b. Add a key to the service account and save it locally.
-  c. On the Bucket, give the service account permission to create and update objects.
-  d. Update environment config to point `GOOGLE_APPLICATION_CREDENTIALS` at the location of the locally stored service account key.
-6. Use the Google Cloud Shell to set bucket CORS policy:
-  a. Open Google Cloud Shell.
-  b. Run `nano cors.json` amd paste in the value contained in `cors.json` in this repo.
-  c. Run `gsutil cors set cors.json gs://BUCKET_NAME`.
-  d. Resources on the bucket are now accessible from any origin.
+- [Google Cloud Platform Infrastructure Setup](./docs/setup-cloud-infra.md)
+- [Application Development](./docs/development.md)
+- [Application Deployment](./docs/deploy.md) 

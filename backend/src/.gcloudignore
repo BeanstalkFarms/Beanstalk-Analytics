@@ -1,0 +1,10 @@
+setup.py # Ignore setup.py as the directory is not used as a package once uploaded 
+**/*.egg-info
+.pytest_cache/
+**/__pycache__/
+**/.ipynb_checkpoints/
+notebooks/dev/
+notebooks/testing/
+tests/
+script_profile_notebooks.py
+script_execute_notebooks.py
