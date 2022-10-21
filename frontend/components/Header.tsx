@@ -34,6 +34,9 @@ const Header : React.FC<{
         <NavLink href="/credit-profile">
           Credit Profile
         </NavLink>
+        <NavLink href="/liquidity">
+          Liquidity
+        </NavLink>
         <NavLink href="/silo">
           Silo
         </NavLink>
@@ -45,9 +48,6 @@ const Header : React.FC<{
         </NavLink>
         <NavLink href="/market">
           Market
-        </NavLink>
-        <NavLink href="/liquidity">
-          Liquidity
         </NavLink>
       </div>
       <div className="flex items-center justify-end">
