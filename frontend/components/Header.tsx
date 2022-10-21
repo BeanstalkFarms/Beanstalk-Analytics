@@ -46,6 +46,9 @@ const Header : React.FC<{
         <NavLink href="/market">
           Market
         </NavLink>
+        <NavLink href="/liquidity">
+          Liquidity
+        </NavLink>
       </div>
       <div className="flex items-center justify-end">
         <a href="https://app.bean.money" target="_blank" rel="noreferrer">
