@@ -26,10 +26,11 @@ const Header : React.FC<{
   children
 }) => {
   return (
-    <div className="flex flex-row px-4 py-2 border-b border-gray-200">
-      <div className="flex-1 flex items-center justify-start md:space-x-5 space-x-2">
-        <NavLink href="/" className="md:inline-block hidden">
-          <img alt="" src="/beanstalk.svg" className="h-5" /> 
+    <div className="flex flex-row md:px-4 px-2 py-2 border-b border-gray-50">
+      <div className="flex-1 flex items-center justify-start md:space-x-6 space-x-4">
+        <NavLink href="/">
+          <img alt="" src="/beanstalk.svg" className="h-5 hidden md:inline -mt-1" /> 
+          <img alt="" src="/bean-logo-circled.svg" className="h-8 md:hidden inline" /> 
         </NavLink>
         <NavLink href="/credit-profile">
           Credit Profile
@@ -50,7 +51,7 @@ const Header : React.FC<{
           Market
         </NavLink>
       </div>
-      <div className="flex items-center justify-end">
+      <div className="hidden md:flex items-center justify-end">
         <a href="https://app.bean.money" target="_blank" rel="noreferrer">
           <Button>
             Launch App

@@ -37,14 +37,3 @@ a:hover {
 * {
   box-sizing: border-box;
 }
-
-/* .page {
-  display: block;
-  background-image: url('./img/interface/bg/default-gradient.png');
-  background-attachment: fixed;
-  background-position: bottom center;
-  background-size: 100%;
-  background-repeat: no-repeat;
-  width: '100%';
-  min-height: calc(100vh - 60px);
-} */
