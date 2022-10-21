@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import contracts from "../../lib/contracts";
-import {FertilizerFacet} from "../../generated/Beanstalk";
+import { FertilizerFacet } from '../generated/Beanstalk';
+import contracts from '../lib/contracts';
 
 export default function FertQueue() {
   const [queue, setQueue] = useState<null | FertilizerFacet.SupplyStructOutput[]>(null);
