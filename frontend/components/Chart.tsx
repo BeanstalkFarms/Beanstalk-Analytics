@@ -275,7 +275,7 @@ const initialState: ChartState = {
 
 
 type Action =
- | { type: "start-loading" }
+ | { type: "start-loading", spec: Spec | null }
  | { type: "set-resizing", is_resizing: boolean }
  | { type: "replace-state", chart_state: ChartState }
  | { type: "toggle-user-can-refresh" }
@@ -288,7 +288,7 @@ function reducer(state: ChartState, action: Action): ChartState {
       return {...state, is_resizing: action.is_resizing}; 
     case "start-loading": 
       return reducerAfterware({
-        spec: state.spec,
+        spec: action.spec,
         status_chart: "loading", 
         status_refresh_endpoint: "pending", 
         status_storage_endpoint: "pending", 
@@ -324,11 +324,11 @@ const Chart : React.FC<{
   const [state, dispatch] = useReducer(reducer, initialState); 
   const ref_header = useRef(null); 
   const [header_width, header_height] = useSize(ref_header); 
-  const { spec, status_chart, user_can_refresh, is_resizing } = state; 
+  const { spec, status_chart, user_can_refresh, is_resizing, status_refresh_endpoint } = state; 
 
   useEffect(() => {
     if (status_chart === 'pre-loading') {
-      dispatch({type: "start-loading"});
+      dispatch({type: "start-loading", spec});
     } else if (status_chart === 'loading') {
       (async () => {
         if (ARTIFICIAL_DELAY) {
@@ -339,54 +339,110 @@ const Chart : React.FC<{
         // Including the Authorization header forces the requests to do CORS preflight 
         // const headers = {"Authorization": "Bearer dummy_force_cors_preflight"}
         const headers = {}; 
+        let first_request_success = false; 
         let new_spec: Spec | null; 
         let new_status_refresh_endpoint: EndpointStatus;
         let new_status_storage_endpoint: EndpointStatus; 
-        // 1. Make a call to the refresh endpoint 
-        try {
-          const res = await fetch(urlApiName(name).toString(), {"headers": headers })
-            .then(r => r.json());
-          const { status } = res[name.toLowerCase()]; 
-          if (status !== 'recomputed' && status !== 'use_cached') {
-            throw new Error(`Unrecognized status returned from cloud function: ${status}`)
+        // Request Flow 
+        // ---------------------------------------------------------------------------
+        // 1. Send a request to the bucket for data (if no spec exists).
+        // 2. If (1) fails (object does not exist), skip to (4). 
+        //    If this occurs, since we're already in the "loading" state, 
+        //    the status indicator is already in the correct state. 
+        // 3. If (1) succeeds
+        //    3.1. If spec is refreshable (> 15 minutes old), re-enter the loading state. 
+        //      However, we will update the spec with the spec retrieved from (1) prior 
+        //      to re-entering the loading request flow, so a chart will be visible. 
+        //    3.2. If spec not refreshable, update the chart state and terminate the flow 
+        //      (no to refresh or send second storage request). 
+        // 4. Send a request to the refresh endpoint. 
+        // 5. Send a request to the storage endpoint. 
+        // 6. Update chart state 
+        if (!spec) {
+          // (1)
+          try {
+            const res = await fetch(urlBucketName(name).toString(), {"headers": headers })
+              .then(r => r.json()); 
+            first_request_success = true; 
+            const spec_timestamp = new SpecTimestamp(res.timestamp); 
+            new_spec = {
+              name, 
+              spec: res.spec, 
+              timestamp: spec_timestamp, 
+              query_runtime_secs: parseFloat(res.run_time_seconds),
+              age_minutes: spec_timestamp.get_age_minutes(), 
+              width_paths: res.width_paths, 
+              css: res.css, 
+            }
+            if (is_past_age_threshold(spec_timestamp)) {
+              // (3.1)
+              dispatch({type: "start-loading", spec: new_spec});
+            } else {
+              // (3.2)
+              dispatch({ 
+                type: "replace-state",  
+                chart_state: { 
+                  spec: new_spec, 
+                  status_chart: "stable", 
+                  status_refresh_endpoint, // we didn't submit a refresh request so don't change. 
+                  status_storage_endpoint: "success", 
+                  user_can_refresh: false, // age less than threshold so not refreshable. 
+                  is_resizing: false, // new spec loaded so not resizing. 
+                }
+              })
+            }
+          } catch (e) {
+            // (2)
+            console.error(e);
           }
-          new_status_refresh_endpoint = "success"; 
-        } catch (e) {
-          console.error(e);
-          new_status_refresh_endpoint = "failure"; 
+        } 
+        if (!first_request_success) {
+          // (4)
+          try {
+            const res = await fetch(urlApiName(name).toString(), {"headers": headers })
+              .then(r => r.json());
+            const { status } = res[name.toLowerCase()]; 
+            if (status !== 'recomputed' && status !== 'use_cached') {
+              throw new Error(`Unrecognized status returned from cloud function: ${status}`)
+            }
+            new_status_refresh_endpoint = "success"; 
+          } catch (e) {
+            console.error(e);
+            new_status_refresh_endpoint = "failure"; 
+          }
+          // (5) 
+          try {
+            const res = await fetch(urlBucketName(name).toString(), {"headers": headers })
+              .then(r => r.json()); 
+            new_status_storage_endpoint = "success"; 
+            const spec_timestamp = new SpecTimestamp(res.timestamp); 
+            new_spec = {
+              name, 
+              spec: res.spec, 
+              timestamp: spec_timestamp, 
+              query_runtime_secs: parseFloat(res.run_time_seconds),
+              age_minutes: spec_timestamp.get_age_minutes(), 
+              width_paths: res.width_paths, 
+              css: res.css, 
+            }
+          } catch (e) {
+            console.error(e);
+            new_status_storage_endpoint = "failure"; 
+            new_spec = spec;
+          }
+          // (6)
+          dispatch({ 
+            type: "replace-state",  
+            chart_state: { 
+              spec: new_spec, 
+              status_chart: "stable", 
+              status_refresh_endpoint: new_status_refresh_endpoint, 
+              status_storage_endpoint: new_status_storage_endpoint, 
+              user_can_refresh: false,
+              is_resizing: false, 
+            }
+          })
         }
-        // 2. Make a call to the storage endpoint 
-        try {
-          const res = await fetch(urlBucketName(name).toString(), {"headers": headers })
-            .then(r => r.json()); 
-          new_status_storage_endpoint = "success"; 
-          const spec_timestamp = new SpecTimestamp(res.timestamp); 
-          new_spec = {
-            name, 
-            spec: res.spec, 
-            timestamp: spec_timestamp, 
-            query_runtime_secs: parseFloat(res.run_time_seconds),
-            age_minutes: spec_timestamp.get_age_minutes(), 
-            width_paths: res.width_paths, 
-            css: res.css, 
-          }
-        } catch (e) {
-          console.error(e);
-          new_status_storage_endpoint = "failure"; 
-          new_spec = spec;
-        }
-        // Update state 
-        dispatch({ 
-          type: "replace-state",  
-          chart_state: { 
-            spec: new_spec, 
-            status_chart: "stable", 
-            status_refresh_endpoint: new_status_refresh_endpoint, 
-            status_storage_endpoint: new_status_storage_endpoint, 
-            user_can_refresh: false,
-            // is_resizing: false, 
-          }
-        })
       })();
     }
   }, [spec, status_chart, name]);
@@ -425,7 +481,7 @@ const Chart : React.FC<{
   }
 
   const refreshChart = () => {
-    if (user_can_refresh) dispatch({type: "start-loading"});
+    if (user_can_refresh) dispatch({type: "start-loading", spec});
   }; 
 
   const slug = kebabCase(title);
