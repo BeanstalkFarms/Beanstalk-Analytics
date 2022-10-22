@@ -3,7 +3,6 @@ import Link, { LinkProps } from "next/link";
 import { useRouter } from "next/router";
 import React from "react";
 import Button from './Button';
-import Navigation from "./Navigation";
 
 const NavLink : React.FC<React.PropsWithChildren<LinkProps & { className?: string; }>> = ({ className, children, ...props }) => {
   const router = useRouter();
@@ -20,18 +19,17 @@ const NavLink : React.FC<React.PropsWithChildren<LinkProps & { className?: strin
   )
 }
 
-const Header : React.FC<{
-  children?: React.ReactNode;
-}> = ({
-  children
-}) => {
+const Header : React.FC<{}> = () => {
   return (
     <div className="flex flex-row md:px-4 px-2 py-2 border-b border-gray-50">
       <div className="flex-1 flex items-center justify-start md:space-x-6 space-x-4">
-        <NavLink href="/">
-          <img alt="" src="/beanstalk.svg" className="h-5 hidden md:inline -mt-1" /> 
-          <img alt="" src="/bean-logo-circled.svg" className="h-8 md:hidden inline" /> 
-        </NavLink>
+        <Link href="/">
+          <a className="inline-flex items-center space-x-2">
+            <img alt="" src="/beanstalk.svg" className="h-5 hidden md:inline" /> 
+            <img alt="" src="/bean-logo-circled.svg" className="h-8 md:hidden inline" />
+            <span className="no-underline bg-slate-200 color-white px-2 py-0.5 rounded-md text-[10px]">BETA</span>
+          </a>
+        </Link>
         <NavLink href="/credit-profile">
           Credit Profile
         </NavLink>
