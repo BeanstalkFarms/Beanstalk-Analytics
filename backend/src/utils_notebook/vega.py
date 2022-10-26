@@ -185,6 +185,19 @@ def output_chart(c: alt.Chart, css: Optional[str] = None):
     })
 
 
+XAXIS_DEFAULTS = dict(
+    formatType="time", 
+    ticks=False, 
+    labelExpr="timeFormat(toDate(datum.value), '%b %e, %Y')", 
+    labelOverlap=True, 
+    labelSeparation=50, 
+    labelPadding=5, 
+    title='Date', 
+    labelAngle=0, 
+)
+
+
+
 def chart_stack_area_overlay_line_timeseries(
     df: pd.DataFrame, 
     timestamp_col: str, 
@@ -211,19 +224,9 @@ def chart_stack_area_overlay_line_timeseries(
     tooltip_formats = tooltip_formats or {}
 
     # x axis kwargs 
-    xaxis_kwargs_default = dict(
-        formatType="time", 
-        ticks=False, 
-        labelExpr="timeFormat(toDate(datum.value), '%b %e, %Y')", 
-        labelOverlap=True, 
-        labelSeparation=50, 
-        labelPadding=5, 
-        title='Date', 
-        labelAngle=0, 
-    )
     xaxis_kwargs = xaxis_kwargs or {}
     xaxis_kwargs = (
-        {**xaxis_kwargs_default, **(xaxis_kwargs or {})} 
+        {**XAXIS_DEFAULTS, **(xaxis_kwargs or {})} 
         if not xaxis_kwargs_override else 
         xaxis_kwargs 
     ) 
@@ -279,8 +282,8 @@ def chart_stack_area_overlay_line_timeseries(
         .transform_filter(f"""
             year(datum['{timestamp_col}']) === 2022 && 
             month(datum['{timestamp_col}']) === 3 && 
-            date(datum['{timestamp_col}']) === {exploit_day} && warn(datetime(datum['{timestamp_col}']))
-        """)
+            date(datum['{timestamp_col}']) === {exploit_day} 
+        """) # && warn(datetime(datum['{timestamp_col}']))
         .mark_rule(opacity=1, color='#474440', strokeDash=[2.5,1])
     )
         
