@@ -227,6 +227,7 @@ def chart(
     width: int = 700, 
     selection_nearest: alt.selection = None, 
     return_selection: bool = False, 
+    base_hook = None, 
 ): 
     """Creates a chart with a shared time axis and up to two y axes 
         
@@ -258,11 +259,11 @@ def chart(
         .properties(title=title, width=width)
     )
         
+    cbase = base.transform_calculate(stack_order=stack_order_expr("variable", metrics))
+    if base_hook: 
+        cbase = base_hook(cbase)
     cbase = (
-        base
-        # Stack order matters when we are using an area chart 
-        .transform_calculate(stack_order=stack_order_expr("variable", metrics))
-        .encode(
+        cbase.encode(
             color=alt.Color("variable:N", scale=color_scale, legend=alt.Legend(title=None)), 
             order=alt.Order('stack_order:Q', sort='ascending'),
         )
