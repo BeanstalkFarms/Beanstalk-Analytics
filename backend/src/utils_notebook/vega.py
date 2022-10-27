@@ -219,7 +219,7 @@ def chart(
     yaxis_left_kwargs_override: bool = False, 
     yaxis_right_kwargs: dict = None, 
     yaxis_right_kwargs_override: bool = False, 
-    color_map = None,      
+    colors = None,      
     tooltip_formats = None, 
     dual_axes: bool = False, 
     show_exploit_rule: bool = True, 
@@ -248,8 +248,8 @@ def chart(
         )
 
     # Color Scale 
-    if color_map: 
-        color_scale = alt.Scale(domain=metrics, range=[color_map[m] for m in metrics])
+    if colors: 
+        color_scale = alt.Scale(domain=metrics, range=[colors[m] for m in metrics])
     else: 
         color_scale = alt.Scale(domain=metrics)
     
