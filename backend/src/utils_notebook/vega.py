@@ -1,4 +1,5 @@
 import json
+import builtins 
 from typing import Optional, List 
 
 import altair as alt 
@@ -197,82 +198,162 @@ XAXIS_DEFAULTS = dict(
 )
 
 
+def possibly_override(data = None, defaults = None, override = False):
+    defaults = defaults or {}
+    data = data or {} 
+    # Mix by default, override optionally 
+    return {**defaults, **data} if not override else data 
 
-def chart_stack_area_overlay_line_timeseries(
+
+def chart(
     df: pd.DataFrame, 
     timestamp_col: str, 
-    metrics,
-    area_metrics,
-    title: str, 
+    lmetrics: List[str], 
+    rmetrics: List[str] = None, 
+    lstrategy: str = 'line', 
+    rstrategy: str = 'line', 
+    title: str = '', 
     xaxis_kwargs = None, 
     xaxis_kwargs_override: bool = False, 
-    yaxis_area_kwargs: dict = None, 
-    yaxis_area_kwargs_override: bool = False, 
-    yaxis_line_kwargs: dict = None, 
-    yaxis_line_kwargs_override: bool = False, 
+    yaxis_left_kwargs: dict = None, 
+    yaxis_left_kwargs_override: bool = False, 
+    yaxis_right_kwargs: dict = None, 
+    yaxis_right_kwargs_override: bool = False, 
     color_map = None,      
     tooltip_formats = None, 
-    separate_y_axes: bool = False, 
+    dual_axes: bool = False, 
     show_exploit_rule: bool = True, 
     exploit_day: int = 17, # must be either 16 or 17
     width: int = 700, 
+    selection_nearest: alt.selection = None, 
+    return_selection: bool = False, 
 ): 
-    """Creates a stacked area plot with lines overlaid on top 
-    
+    """Creates a chart with a shared time axis and up to two y axes 
+        
     Assumes that data is in long-wide format (i.e. df was processed with function wide_to_longwide)
     """
+    rmetrics = rmetrics or []
+    assert not set(lmetrics).intersection(set(rmetrics)), "Same metric on two axes"
+    metrics = lmetrics + rmetrics
     tooltip_formats = tooltip_formats or {}
+    xaxis_kwargs = possibly_override(xaxis_kwargs, XAXIS_DEFAULTS, override=xaxis_kwargs_override)
+    yaxis_left_kwargs = possibly_override(yaxis_left_kwargs, None, override=yaxis_left_kwargs_override)
+    yaxis_right_kwargs = possibly_override(yaxis_right_kwargs, None, override=yaxis_right_kwargs_override)
 
-    # x axis kwargs 
-    xaxis_kwargs = xaxis_kwargs or {}
-    xaxis_kwargs = (
-        {**XAXIS_DEFAULTS, **(xaxis_kwargs or {})} 
-        if not xaxis_kwargs_override else 
-        xaxis_kwargs 
-    ) 
-    # y axis area kwargs 
-    yaxis_area_kwargs_default = dict() 
-    yaxis_area_kwargs = yaxis_area_kwargs or {}
-    yaxis_area_kwargs = (
-        {**yaxis_area_kwargs_default, **(yaxis_area_kwargs or {})} 
-        if not yaxis_area_kwargs_override else 
-        yaxis_area_kwargs 
-    ) 
-    # y axis line kwargs 
-    yaxis_line_kwargs_default = dict() 
-    yaxis_line_kwargs = yaxis_line_kwargs or {}
-    yaxis_line_kwargs = (
-        {**yaxis_line_kwargs_default, **(yaxis_line_kwargs or {})} 
-        if not yaxis_line_kwargs_override else 
-        yaxis_line_kwargs 
-    ) 
-    
-    # construct axes 
-    xaxis = alt.Axis(**xaxis_kwargs)
-    yaxis_area = alt.Axis(**yaxis_area_kwargs)
-    yaxis_line = alt.Axis(**yaxis_line_kwargs) 
-    
-    # Shared x encoding channel (lines and area on same time axis) 
-    x = alt.X(f"{timestamp_col}:O", axis=xaxis)
+    # Selection for nearest point 
+    if not selection_nearest: 
+        selection_nearest = alt.selection_single(
+            fields=[timestamp_col], nearest=True, on='mouseover', empty='none', clear='mouseout'
+        )
 
-    # Optional custom color scale 
+    # Color Scale 
     if color_map: 
         color_scale = alt.Scale(domain=metrics, range=[color_map[m] for m in metrics])
     else: 
         color_scale = alt.Scale(domain=metrics)
-        
-    # Tooltips
-    tooltips = (
-        [alt.Tooltip(f'{timestamp_col}:O', timeUnit="yearmonthdate", title="date")] + 
-        [alt.Tooltip(f'{m}:Q', format=tooltip_formats.get(m, ",d")) for m in metrics]
-    )
     
     base = (
         alt.Chart(df)
-        .encode(x=x)
+        .encode(x=alt.X(f"{timestamp_col}:O", axis=alt.Axis(**xaxis_kwargs)))
         .properties(title=title, width=width)
     )
+        
+    cbase = (
+        base
+        # Stack order matters when we are using an area chart 
+        .transform_calculate(stack_order=stack_order_expr("variable", metrics))
+        .encode(
+            color=alt.Color("variable:N", scale=color_scale, legend=alt.Legend(title=None)), 
+            order=alt.Order('stack_order:Q', sort='ascending'),
+        )
+    )
+
+    class Strategies: 
+
+        @staticmethod
+        def line(base, axis):
+            return (
+                base 
+                .mark_line()
+                .encode(y=alt.Y("value:Q", axis=axis))
+            )
+
+        @staticmethod
+        def stack_area(base, axis):
+            return (
+                base 
+                .transform_calculate(sort_col=stack_order_expr("variable", metrics))
+                .mark_area(point='transparent')
+                .encode(y=alt.Y("value:Q", axis=axis)) 
+            )
+            
+        @staticmethod
+        def stack_bar(base, axis):
+            return (
+                base 
+                .transform_calculate(sort_col=stack_order_expr("variable", metrics))
+                .mark_bar()
+                .encode(y=alt.Y("value:Q", axis=axis)) 
+            )
+
+    strategies = {
+        "line": Strategies.line, 
+        "stack_area": Strategies.stack_area, 
+        "stack_bar": Strategies.stack_bar,
+    }
     
+    left_wrapper = dict(chart=None)
+    right_wrapper = dict(chart=None)
+    chart_specs = [
+        (lstrategy, lmetrics, yaxis_left_kwargs, left_wrapper), 
+    ]
+    if rmetrics: 
+        chart_specs.append((rstrategy, rmetrics, yaxis_right_kwargs, right_wrapper))
+    
+    for strategy, smetrics, axis_kwargs, chart_wrapper in chart_specs:
+        match type(strategy): 
+            case builtins.str: 
+                # Apply a single strategy to all metrics on this axis 
+                chart_wrapper['chart'] = strategies[strategy](
+                    cbase.transform_filter(condition_union("==", "|", smetrics)),
+                    alt.Axis(**axis_kwargs)
+                ) 
+            case builtins.list: 
+                # Apply strategies on a per-metric basis 
+                assert len(strategy) == len(smetrics)
+                df_strategy_metric = pd.DataFrame(dict(strategy=strategy, metrics=smetrics))
+                for strategy, df_sm in df_strategy_metric.groupby("strategy"): 
+                    sub_metrics = df_sm.metrics.values.tolist()
+                    layer = strategies[strategy](
+                        cbase.transform_filter(condition_union("==", "|", sub_metrics)),
+                        alt.Axis(**axis_kwargs)
+                    ) 
+                    if not chart_wrapper['chart']: 
+                        chart_wrapper['chart'] = layer 
+                    else: 
+                        chart_wrapper['chart'] += layer 
+            case _: 
+                raise ValueError(f"Invalid strategy {strategy}")
+            
+    left = left_wrapper['chart']
+    right = right_wrapper['chart']
+
+    nearest = (
+        # selection captures nearest timestamp (for current mouse position) 
+        # tooltip rendered uses this data point (pivoted, so we have all data for this timestamp) 
+        base
+        .transform_pivot('variable', value='value', groupby=[timestamp_col])
+        .mark_rule(color="#878787")
+        .encode(
+            tooltip=(
+                [alt.Tooltip(f'{timestamp_col}:O', timeUnit="yearmonthdate", title="date")] + 
+                [alt.Tooltip(f'{m}:Q', format=tooltip_formats.get(m, ",d")) for m in metrics]
+            ), 
+            opacity=alt.condition(selection_nearest, alt.value(1), alt.value(0))
+        )
+        .add_selection(selection_nearest)
+    )
+
     assert exploit_day in [16, 17]
     rule_exploit = (
         # selection captures nearest timestamp (for current mouse position) 
@@ -286,41 +367,27 @@ def chart_stack_area_overlay_line_timeseries(
         """) # && warn(datetime(datum['{timestamp_col}']))
         .mark_rule(opacity=1, color='#474440', strokeDash=[2.5,1])
     )
-        
-    cbase = (
-        base
-        # Ensures that stacked area is in same order as input 'metrics' 
-        .transform_calculate(stack_order=stack_order_expr("variable", metrics))
-        .encode(
-            color=alt.Color("variable:N", scale=color_scale, legend=alt.Legend(title=None)), 
-            order=alt.Order('stack_order:Q', sort='ascending'),
-        )
-    )
 
-    area = (
-        cbase
-        .transform_filter(condition_union("==", "|", area_metrics))
-        .transform_calculate(sort_col=stack_order_expr("variable", metrics))
-        .mark_area(point='transparent')
-        .encode(y=alt.Y("value:Q", axis=yaxis_area), tooltip=tooltips)
-    )
-
-    line = (
-        cbase
-        .transform_filter(condition_union("!=", "&", area_metrics))
-        .mark_line()
-        .encode(y=alt.Y("value:Q", axis=yaxis_line))
-    )
-    
-    if show_exploit_rule: 
-        # Rule doesn't show up unless layered with line or area base. 
-        c = area + alt.layer(line, rule_exploit)
+    # Compose plot 
+    if not rmetrics: 
+        if show_exploit_rule: 
+            c = left + rule_exploit + nearest
+        else: 
+            c = left + nearest
     else: 
-        c = area + line 
-    if separate_y_axes: 
+        if show_exploit_rule: 
+            # It matters that the rules are layered with right instead of left, not sure why. 
+            # Parentheses are important in case where dual_axes is True 
+            c = left + (right + rule_exploit + nearest)
+        else: 
+            # It matters that the rules are layered with right instead of left, not sure why. 
+            # Parentheses are important in case where dual_axes is True 
+            c = left + (right + nearest)
+    if dual_axes: 
+        assert rmetrics, "Can't have two axes if you didn't specify rmetrics" 
         c = (
             c
             .resolve_scale(y="independent")
             .resolve_axis(y="independent")
         )
-    return c 
+    return c if not return_selection else (c, selection_nearest)
