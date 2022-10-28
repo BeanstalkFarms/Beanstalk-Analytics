@@ -208,23 +208,34 @@ def possibly_override(data = None, defaults = None, override = False):
 def chart(
     df: pd.DataFrame, 
     timestamp_col: str, 
+    # metrics associated with left and right axes 
     lmetrics: List[str], 
     rmetrics: List[str] = None, 
-    lstrategy: str = 'line', 
-    rstrategy: str = 'line', 
-    title: str = '', 
+    # strategy_fns to plot metrics on left and right axes 
+    lstrategy = 'line', 
+    rstrategy = 'line', 
+    # mapping of strategy to stack layer order when rendering     
+    lorder = None, 
+    rorder = None, 
+    # mapping of strategy to mark properties 
+    lmark_kwargs = None, 
+    rmark_kwargs = None, 
+    # Axis parameters 
     xaxis_kwargs = None, 
     xaxis_kwargs_override: bool = False, 
     yaxis_left_kwargs: dict = None, 
-    yaxis_left_kwargs_override: bool = False, 
     yaxis_right_kwargs: dict = None, 
-    yaxis_right_kwargs_override: bool = False, 
+    # Chart parameters 
+    title: str = '', 
     colors = None,      
     tooltip_formats = None, 
+    tooltip_format_default: str = ",d", 
+    tooltip_metrics = None, 
     dual_axes: bool = False, 
     show_exploit_rule: bool = True, 
     exploit_day: int = 17, # must be either 16 or 17
     width: int = 700, 
+    hide_legend: bool = False, 
     selection_nearest: alt.selection = None, 
     return_selection: bool = False, 
     base_hook = None, 
@@ -237,34 +248,46 @@ def chart(
     assert not set(lmetrics).intersection(set(rmetrics)), "Same metric on two axes"
     metrics = lmetrics + rmetrics
     tooltip_formats = tooltip_formats or {}
-    xaxis_kwargs = possibly_override(xaxis_kwargs, XAXIS_DEFAULTS, override=xaxis_kwargs_override)
-    yaxis_left_kwargs = possibly_override(yaxis_left_kwargs, None, override=yaxis_left_kwargs_override)
-    yaxis_right_kwargs = possibly_override(yaxis_right_kwargs, None, override=yaxis_right_kwargs_override)
-
-    # Selection for nearest point 
-    if not selection_nearest: 
+    xaxis_kwargs = possibly_override(
+        xaxis_kwargs, XAXIS_DEFAULTS, override=xaxis_kwargs_override
+    )
+    yaxis_left_kwargs = yaxis_left_kwargs or {}
+    yaxis_right_kwargs = yaxis_right_kwargs or {}
+    lmark_kwargs = lmark_kwargs or {} 
+    rmark_kwargs = rmark_kwargs or {}
+    # Selection for nearest point. We either use an existing instance passed in by the user 
+    # or create a new instance. Using an existing instance allows a selection to be shared 
+    # across charts, which can be useful for creating interactions between linked views 
+    if selection_nearest: 
+        add_selection = False 
+    else: 
+        add_selection = True
         selection_nearest = alt.selection_single(
             fields=[timestamp_col], nearest=True, on='mouseover', empty='none', clear='mouseout'
         )
-
-    # Color Scale 
-    if colors: 
-        color_scale = alt.Scale(domain=metrics, range=[colors[m] for m in metrics])
-    else: 
-        color_scale = alt.Scale(domain=metrics)
+    
+    # Color scale is shared by metrics, regardless of what axis they belong to. User can 
+    # either specify the desired colors for each metric or let defaults be used. 
+    color_scale = (
+        alt.Scale(domain=metrics, range=[colors[m] for m in metrics])
+        if colors else 
+        alt.Scale(domain=metrics)
+    )
+    
     
     base = (
         alt.Chart(df)
+        .transform_calculate(stack_order=stack_order_expr("variable", metrics))
         .encode(x=alt.X(f"{timestamp_col}:O", axis=alt.Axis(**xaxis_kwargs)))
         .properties(title=title, width=width)
     )
-        
-    cbase = base.transform_calculate(stack_order=stack_order_expr("variable", metrics))
     if base_hook: 
-        cbase = base_hook(cbase)
+        base = base_hook(base)
+        
     cbase = (
-        cbase.encode(
-            color=alt.Color("variable:N", scale=color_scale, legend=alt.Legend(title=None)), 
+        base
+        .encode(
+            color=alt.Color("variable:N", scale=color_scale, legend=None if hide_legend else alt.Legend(title=None)), 
             order=alt.Order('stack_order:Q', sort='ascending'),
         )
     )
@@ -272,33 +295,40 @@ def chart(
     class Strategies: 
 
         @staticmethod
-        def line(base, axis):
+        def line(base, axis, mark_kwargs):
             return (
                 base 
-                .mark_line()
+                .mark_line(**mark_kwargs)
                 .encode(y=alt.Y("value:Q", axis=axis))
             )
-
+        
         @staticmethod
-        def stack_area(base, axis):
+        def point(base, axis, mark_kwargs):
             return (
                 base 
-                .transform_calculate(sort_col=stack_order_expr("variable", metrics))
-                .mark_area(point='transparent')
+                .mark_point(**mark_kwargs)
+                .encode(y=alt.Y("value:Q", axis=axis, ))
+            )
+        
+        @staticmethod
+        def stack_area(base, axis, mark_kwargs):
+            return (
+                base 
+                .mark_area(**mark_kwargs)
                 .encode(y=alt.Y("value:Q", axis=axis)) 
             )
             
         @staticmethod
-        def stack_bar(base, axis):
+        def stack_bar(base, axis, mark_kwargs):
             return (
                 base 
-                .transform_calculate(sort_col=stack_order_expr("variable", metrics))
-                .mark_bar()
+                .mark_bar(**mark_kwargs)
                 .encode(y=alt.Y("value:Q", axis=axis)) 
             )
 
-    strategies = {
+    strategy_fns = {
         "line": Strategies.line, 
+        "point": Strategies.point, 
         "stack_area": Strategies.stack_area, 
         "stack_bar": Strategies.stack_bar,
     }
@@ -306,39 +336,56 @@ def chart(
     left_wrapper = dict(chart=None)
     right_wrapper = dict(chart=None)
     chart_specs = [
-        (lstrategy, lmetrics, yaxis_left_kwargs, left_wrapper), 
+        (lstrategy, lmetrics, yaxis_left_kwargs, lorder, lmark_kwargs, left_wrapper), 
     ]
     if rmetrics: 
-        chart_specs.append((rstrategy, rmetrics, yaxis_right_kwargs, right_wrapper))
-    
-    for strategy, smetrics, axis_kwargs, chart_wrapper in chart_specs:
+        chart_specs.append(
+            (rstrategy, rmetrics, yaxis_right_kwargs, rorder, rmark_kwargs, right_wrapper)
+        )
+    for strategy, smetrics, axis_kwargs, order, mark_kwargs, chart_wrapper in chart_specs:
         match type(strategy): 
             case builtins.str: 
                 # Apply a single strategy to all metrics on this axis 
-                chart_wrapper['chart'] = strategies[strategy](
+                strat_fn = strategy_fns[strategy]
+                mkw = mark_kwargs.get(strategy, {})
+                chart_wrapper['chart'] = strat_fn(
                     cbase.transform_filter(condition_union("==", "|", smetrics)),
-                    alt.Axis(**axis_kwargs)
+                    alt.Axis(**axis_kwargs), 
+                    mkw 
                 ) 
             case builtins.list: 
                 # Apply strategies on a per-metric basis 
                 assert len(strategy) == len(smetrics)
                 df_strategy_metric = pd.DataFrame(dict(strategy=strategy, metrics=smetrics))
-                for strategy, df_sm in df_strategy_metric.groupby("strategy"): 
+                layers = []
+                order_default = {
+                    "stack_area": 0, 
+                    "stack_bar": 1,
+                    "line": 2, 
+                    "point": 3, 
+                }
+                order = order or order_default
+                ax = alt.Axis(**axis_kwargs)
+                for strategy, df_sm in sorted(
+                    df_strategy_metric.groupby("strategy"), key=lambda e: order[e[0]]
+                ): 
                     sub_metrics = df_sm.metrics.values.tolist()
-                    layer = strategies[strategy](
-                        cbase.transform_filter(condition_union("==", "|", sub_metrics)),
-                        alt.Axis(**axis_kwargs)
+                    strat_fn = strategy_fns[strategy]
+                    mkw = mark_kwargs.get(strategy, {})
+                    layer = strat_fn(
+                        cbase.transform_filter(condition_union("==", "|", sub_metrics)), 
+                        ax, 
+                        mkw 
                     ) 
-                    if not chart_wrapper['chart']: 
-                        chart_wrapper['chart'] = layer 
-                    else: 
-                        chart_wrapper['chart'] += layer 
+                    layers.append(layer)
+                chart_wrapper['chart'] = alt.layer(*layers)  
             case _: 
                 raise ValueError(f"Invalid strategy {strategy}")
             
     left = left_wrapper['chart']
     right = right_wrapper['chart']
 
+    tooltip_metrics = tooltip_metrics or metrics 
     nearest = (
         # selection captures nearest timestamp (for current mouse position) 
         # tooltip rendered uses this data point (pivoted, so we have all data for this timestamp) 
@@ -348,12 +395,14 @@ def chart(
         .encode(
             tooltip=(
                 [alt.Tooltip(f'{timestamp_col}:O', timeUnit="yearmonthdate", title="date")] + 
-                [alt.Tooltip(f'{m}:Q', format=tooltip_formats.get(m, ",d")) for m in metrics]
+                [alt.Tooltip(f'{m}:Q', format=tooltip_formats.get(m, tooltip_format_default)) for m in tooltip_metrics]
             ), 
             opacity=alt.condition(selection_nearest, alt.value(1), alt.value(0))
         )
-        .add_selection(selection_nearest)
     )
+    if add_selection: 
+        nearest = nearest.add_selection(selection_nearest)
+    
 
     assert exploit_day in [16, 17]
     rule_exploit = (
