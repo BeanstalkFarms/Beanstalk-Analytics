@@ -220,6 +220,9 @@ def chart(
     # mapping of strategy to mark properties 
     lmark_kwargs = None, 
     rmark_kwargs = None, 
+    # mapping of strategy to extra encodings 
+    l_yscales = None, 
+    r_yscales = None, 
     # Axis parameters 
     xaxis_kwargs = None, 
     xaxis_kwargs_override: bool = False, 
@@ -255,6 +258,8 @@ def chart(
     yaxis_right_kwargs = yaxis_right_kwargs or {}
     lmark_kwargs = lmark_kwargs or {} 
     rmark_kwargs = rmark_kwargs or {}
+    l_yscales = l_yscales or {}
+    r_yscales = r_yscales or {}
     # Selection for nearest point. We either use an existing instance passed in by the user 
     # or create a new instance. Using an existing instance allows a selection to be shared 
     # across charts, which can be useful for creating interactions between linked views 
@@ -295,35 +300,45 @@ def chart(
     class Strategies: 
 
         @staticmethod
-        def line(base, axis, mark_kwargs):
+        def _get_encode_kwargs(yscale_kwargs):
+            yscale = alt.Scale(**yscale_kwargs) if yscale_kwargs else None
+            encode_kwargs = dict() if not yscale else dict(scale=yscale)
+            return encode_kwargs
+
+        @staticmethod
+        def line(base, axis, mark_kwargs, yscale_kwargs):
+            encode_kwargs = Strategies._get_encode_kwargs(yscale_kwargs)
             return (
                 base 
                 .mark_line(**mark_kwargs)
-                .encode(y=alt.Y("value:Q", axis=axis))
+                .encode(y=alt.Y("value:Q", axis=axis, **encode_kwargs))
             )
         
         @staticmethod
-        def point(base, axis, mark_kwargs):
+        def point(base, axis, mark_kwargs, yscale_kwargs):
+            encode_kwargs = Strategies._get_encode_kwargs(yscale_kwargs)
             return (
                 base 
                 .mark_point(**mark_kwargs)
-                .encode(y=alt.Y("value:Q", axis=axis, ))
+                .encode(y=alt.Y("value:Q", axis=axis, **encode_kwargs))
             )
         
         @staticmethod
-        def stack_area(base, axis, mark_kwargs):
+        def stack_area(base, axis, mark_kwargs, yscale_kwargs):
+            encode_kwargs = Strategies._get_encode_kwargs(yscale_kwargs)
             return (
                 base 
                 .mark_area(**mark_kwargs)
-                .encode(y=alt.Y("value:Q", axis=axis)) 
+                .encode(y=alt.Y("value:Q", axis=axis, **encode_kwargs))
             )
             
         @staticmethod
-        def stack_bar(base, axis, mark_kwargs):
+        def stack_bar(base, axis, mark_kwargs, yscale_kwargs):
+            encode_kwargs = Strategies._get_encode_kwargs(yscale_kwargs)
             return (
                 base 
                 .mark_bar(**mark_kwargs)
-                .encode(y=alt.Y("value:Q", axis=axis)) 
+                .encode(y=alt.Y("value:Q", axis=axis, **encode_kwargs))
             )
 
     strategy_fns = {
@@ -336,22 +351,24 @@ def chart(
     left_wrapper = dict(chart=None)
     right_wrapper = dict(chart=None)
     chart_specs = [
-        (lstrategy, lmetrics, yaxis_left_kwargs, lorder, lmark_kwargs, left_wrapper), 
+        (lstrategy, lmetrics, yaxis_left_kwargs, lorder, lmark_kwargs, l_yscales, left_wrapper), 
     ]
     if rmetrics: 
         chart_specs.append(
-            (rstrategy, rmetrics, yaxis_right_kwargs, rorder, rmark_kwargs, right_wrapper)
+            (rstrategy, rmetrics, yaxis_right_kwargs, rorder, rmark_kwargs, r_yscales, right_wrapper)
         )
-    for strategy, smetrics, axis_kwargs, order, mark_kwargs, chart_wrapper in chart_specs:
+    for strategy, smetrics, axis_kwargs, order, mark_kwargs, yscales, chart_wrapper in chart_specs:
         match type(strategy): 
             case builtins.str: 
                 # Apply a single strategy to all metrics on this axis 
                 strat_fn = strategy_fns[strategy]
-                mkw = mark_kwargs.get(strategy, {})
+                strat_mark_kwargs = mark_kwargs.get(strategy, {})
+                strat_yscales = yscales.get(strategy, {})
                 chart_wrapper['chart'] = strat_fn(
                     cbase.transform_filter(condition_union("==", "|", smetrics)),
                     alt.Axis(**axis_kwargs), 
-                    mkw 
+                    strat_mark_kwargs, 
+                    strat_yscales, 
                 ) 
             case builtins.list: 
                 # Apply strategies on a per-metric basis 
@@ -371,11 +388,13 @@ def chart(
                 ): 
                     sub_metrics = df_sm.metrics.values.tolist()
                     strat_fn = strategy_fns[strategy]
-                    mkw = mark_kwargs.get(strategy, {})
+                    strat_mark_kwargs = mark_kwargs.get(strategy, {})
+                    strat_yscales = yscales.get(strategy, {})
                     layer = strat_fn(
                         cbase.transform_filter(condition_union("==", "|", sub_metrics)), 
                         ax, 
-                        mkw 
+                        strat_mark_kwargs,
+                        strat_yscales
                     ) 
                     layers.append(layer)
                 chart_wrapper['chart'] = alt.layer(*layers)  

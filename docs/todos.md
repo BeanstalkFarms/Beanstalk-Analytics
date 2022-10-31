@@ -2,8 +2,6 @@
 
 Priorities are assigned low (1) to high (5)
 
-Any priority **3** or greater should be completed before v1 launch. 
-
 ## Frontend
 
 - **(2)** Fix css styling of tooltips. Can be done through custom vegaEmbed themes but this 
@@ -13,6 +11,9 @@ Any priority **3** or greater should be completed before v1 launch.
 ## Serverless API 
 
 ## Charts 
+
+- Update the liquidity charts to use the generlized chart function. 
+
 
 ## Infrastructure 
 
