@@ -6,10 +6,12 @@ import Chart from "../components/Chart";
 
 const SiloPage: NextPage = () => {
   return (
-    <Page title="Field">
-      <div>
-        Silo analytics are under development - come back soon.
-      </div>
+    <Page title="Silo">
+      <Chart
+        title="Silo Emissions"
+        name="silo_emissions"
+        description="Seignorage distributed to silo members."
+      />
     </Page>
   );
 }

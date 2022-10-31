@@ -4,7 +4,7 @@ import React from 'react';
 import Page from "../components/Page";
 import Chart from "../components/Chart"; 
 
-const Barn: NextPage = () => {
+const BarnPage: NextPage = () => {
   return (
     <Page title="Barn">
       <Chart
@@ -16,4 +16,4 @@ const Barn: NextPage = () => {
   );
 }
 
-export default Barn;
+export default BarnPage;

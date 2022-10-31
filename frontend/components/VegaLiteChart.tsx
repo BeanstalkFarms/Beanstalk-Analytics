@@ -153,8 +153,7 @@ interface VegaLiteChartProps {
   setResizing: (new_is_resizing: boolean) => void 
 }; 
 
-const localizeCss = (name: string, css: string | null): {uid: string, cssProcessed: string | null} => {
-  const uid = `vega-lite-chart-${name}`; 
+const localizeCss = (uid: string, css: string | null): string | null => {
   let cssProcessed = css; 
   if (cssProcessed) {
     let cssParts = cssProcessed.split(/[{}]/).filter(String); 
@@ -184,9 +183,8 @@ const localizeCss = (name: string, css: string | null): {uid: string, cssProcess
       }
     }); 
     cssProcessed = cssParts.join("\n"); 
-    console.log(cssProcessed)
   }
-  return {uid, cssProcessed}
+  return cssProcessed
 }
 
 const VegaLiteChart: React.FC<VegaLiteChartProps> = ({ 
@@ -196,9 +194,10 @@ const VegaLiteChart: React.FC<VegaLiteChartProps> = ({
   const spec_no_data = cloneDeep(omit(spec, 'datasets')); 
   // @ts-ignore
   const data = spec['datasets'];
+  const uid = `vega-lite-chart-${name}`;  
   
   const ref_wrapper = useRef<HTMLDivElement>(null); 
-  const [theme, setTheme] = useState<{theme: string}>({"theme": "catdog"}); 
+  const [theme, setTheme] = useState<{theme: string}>({"theme": uid}); 
   const [w, h] = useSize(ref_wrapper);
   const [resize_toggle, set_resize_toggle] = useState<boolean>(false); 
   const [state, dispatch] = useReducer(reducer, { 
@@ -241,7 +240,7 @@ const VegaLiteChart: React.FC<VegaLiteChartProps> = ({
 
   // Process CSS received from the server. 
   // Localize all styles, the way we do this differs between tooltip vs non-tooltip styles. 
-  const { uid, cssProcessed } = localizeCss(name, css); 
+  const cssProcessed = localizeCss(uid, css); 
 
   // Set to true to see effects of dynamic resizing. Only for debugging issues. 
   const debug_resizing = false; 

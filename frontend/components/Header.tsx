@@ -30,7 +30,7 @@ const Header : React.FC<{}> = () => {
             <span className="no-underline bg-slate-200 color-white px-2 py-0.5 rounded-md text-[10px]">BETA</span>
           </a>
         </Link>
-        <NavLink href="/credit-profile">
+        <NavLink href="/overview">
           Credit Profile
         </NavLink>
         <NavLink href="/liquidity">

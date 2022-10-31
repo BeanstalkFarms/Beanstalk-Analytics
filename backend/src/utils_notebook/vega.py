@@ -240,7 +240,9 @@ def chart(
     width: int = 700, 
     hide_legend: bool = False, 
     selection_nearest: alt.selection = None, 
-    return_selection: bool = False, 
+    create_selection: bool = True, 
+    add_selection: bool = True, 
+    return_selection: bool = False,     
     base_hook = None, 
 ): 
     """Creates a chart with a shared time axis and up to two y axes 
@@ -249,7 +251,7 @@ def chart(
     """
     rmetrics = rmetrics or []
     assert not set(lmetrics).intersection(set(rmetrics)), "Same metric on two axes"
-    metrics = lmetrics + rmetrics
+    metrics = (lmetrics + rmetrics) if not tooltip_metrics else tooltip_metrics
     tooltip_formats = tooltip_formats or {}
     xaxis_kwargs = possibly_override(
         xaxis_kwargs, XAXIS_DEFAULTS, override=xaxis_kwargs_override
@@ -263,10 +265,8 @@ def chart(
     # Selection for nearest point. We either use an existing instance passed in by the user 
     # or create a new instance. Using an existing instance allows a selection to be shared 
     # across charts, which can be useful for creating interactions between linked views 
-    if selection_nearest: 
-        add_selection = False 
-    else: 
-        add_selection = True
+    assert not (create_selection and selection_nearest), "Can't create new selection while specifying existing one" 
+    if create_selection: 
         selection_nearest = alt.selection_single(
             fields=[timestamp_col], nearest=True, on='mouseover', empty='none', clear='mouseout'
         )
