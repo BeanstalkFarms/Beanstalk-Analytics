@@ -31,7 +31,7 @@ const Header : React.FC<{}> = () => {
           </a>
         </Link>
         <NavLink href="/overview">
-          Credit Profile
+          Overview
         </NavLink>
         <NavLink href="/liquidity">
           Liquidity

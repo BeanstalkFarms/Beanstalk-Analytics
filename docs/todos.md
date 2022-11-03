@@ -12,8 +12,7 @@ Priorities are assigned low (1) to high (5)
 
 ## Charts 
 
-- Update the liquidity charts to use the generlized chart function. 
-
+- Fix issue where re-loading on non-base page url leads to 404 error. 
 
 ## Infrastructure 
 
