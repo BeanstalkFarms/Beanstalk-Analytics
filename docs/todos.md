@@ -12,7 +12,8 @@ Priorities are assigned low (1) to high (5)
 
 ## Charts 
 
-- Fix issue where re-loading on non-base page url leads to 404 error. 
+- Figure out what to display in the callout's while they are loading data.  
+- Fix issue where callouts are constantly re-loading data. 
 
 ## Infrastructure 
 

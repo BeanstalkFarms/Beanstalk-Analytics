@@ -18,13 +18,13 @@ const Callout : React.FC<{
                 throw Error('value must be specified.'); 
             }
             body = <React.Fragment>
-                <div>{title}</div>
-                <div>{value}</div>
+                <div className="whitespace-nowrap">{title}</div>
+                <div className="whitespace-nowrap">{value}</div>
             </React.Fragment>; 
         } else {
             body = <React.Fragment>
-                <div>{title}</div>
-                <div>{subtitle}</div>
+                <div className="whitespace-nowrap">{title}</div>
+                <div className="whitespace-nowrap">{subtitle}</div>
             </React.Fragment>; 
         }
     }  
