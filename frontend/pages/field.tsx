@@ -44,6 +44,14 @@ const FieldPage: NextPage = () => {
     data && data[i_pods_harvested] !== undefined && 
     localeNumber(6)(data[i_pods_harvested])
   ); 
+  const soil = (
+    data && data[i_soil] !== undefined && 
+    localeNumber(6)(data[i_soil])
+  ); 
+  const temp = (
+    data && data[i_temp] !== undefined && 
+    percentNumber(2)(data[i_temp])
+  ); 
 
   return (
     <Page title="Field">
@@ -54,27 +62,31 @@ const FieldPage: NextPage = () => {
         raw={false}
       /> */}
       <div className="grid grid-cols-3">
-        <Callout 
-        title="Pods Unharvestable" 
-        status={status} 
-        type="quantity" 
-        value={pods_unharvestable && pods_unharvestable.split(".")[0]} />
-        <Callout 
-        title="Pods Harvested" 
-        status={status} 
-        type="quantity" 
-        value={pods_harvested && pods_harvested.split(".")[0]} />
-        <Callout 
-        title="Pods Harvestable" 
-        status={status} 
-        type="quantity" 
-        value={pods_harvestable && pods_harvestable.split(".")[0]} />
+        <Callout title="Pods Unharvestable" status={status} type="quantity" value={pods_unharvestable && pods_unharvestable.split(".")[0]} />
+        <Callout title="Pods Harvested" status={status} type="quantity" value={pods_harvested && pods_harvested.split(".")[0]} />
+        <Callout title="Pods Harvestable" status={status} type="quantity" value={pods_harvestable && pods_harvestable.split(".")[0]} />
       </div>
       <Chart
         name="pod_line_breakdown"
         title="Pod Line Breakdown"
         description="Historical view of Pods minted in the Field."
       />
+      <div className="grid grid-cols-2">
+        <Callout title="Temperature" status={status} type="quantity" value={temp && `${temp.split(".")[0]}%`} />
+        <Callout title="Soil" status={status} type="quantity" value={soil} />
+      </div>
+      <div className="grid grid-cols-2">
+        <Chart
+          name="temperature"
+          title="Temperature"
+          description="Historical view of temperature in the Field."
+        />
+        <Chart
+          name="soil"
+          title="Available Soil"
+          description="Historical view of available soil in the Field."
+        />
+      </div>
     </Page>
   );
 }
