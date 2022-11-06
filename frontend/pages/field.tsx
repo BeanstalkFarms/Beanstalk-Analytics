@@ -76,16 +76,22 @@ const FieldPage: NextPage = () => {
         <Callout title="Soil" status={status} type="quantity" value={soil} />
       </div>
       <div className="grid grid-cols-2">
-        <Chart
-          name="temperature"
-          title="Temperature"
-          description="Historical view of temperature in the Field."
-        />
-        <Chart
-          name="soil"
-          title="Available Soil"
-          description="Historical view of available soil in the Field."
-        />
+        <div className="p-2">
+          <Chart
+            name="temperature"
+            title="Temperature"
+            description="Historical view of temperature in the Field."
+          />
+        </div>
+        <div className="p-2">
+          <Chart
+            name="soil"
+            title="Available Soil"
+            description="Historical view of available soil in the Field."
+          />
+        </div>
+
+
       </div>
     </Page>
   );

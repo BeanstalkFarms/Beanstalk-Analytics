@@ -478,6 +478,11 @@ def chart_address_value_table(
         name="sortdir", fields=["sort_dir"], bind=radio_sort_dir, init={"sort_dir": "desc"}
     )
 
+    df = df.copy().sort_values(value_field, ascending=False).reset_index(drop=True)
+    df.address = [
+        f"{i+1}. {a}" for a, i in zip(df.address.values, df.index)
+    ]
+
     table_base = (
         alt.Chart(df)
         .transform_joinaggregate(rc="count(*)")
@@ -512,7 +517,7 @@ def chart_address_value_table(
         .mark_rect(stroke="black")
         .encode(
             color=alt.condition("datum.sort_num % 2 === 0", alt.value("#e3e3e3"), alt.value("#ffffff")), 
-            href="href"
+            href="href", 
         )
     ) 
     table_text = (
@@ -532,7 +537,7 @@ def chart_address_value_table(
     c = (
         alt.layer(table_rect, table_text)
         .add_selection(select_scroll, select_radio_sort_dir)
-        .properties(width=750)
+        .properties(width=750, height=500)
     )
     return c 
 
@@ -548,7 +553,8 @@ def chart_bin_count_value_aggregate(
     df: pd.DataFrame, 
     value_field: str, 
     breakpoints: List[float], 
-    width: int = 500, 
+    width: int = 400, 
+    height: int = 200, 
 ): 
     def classify(order, value):
         for i in range(1, len(breakpoints)):
@@ -586,7 +592,6 @@ def chart_bin_count_value_aggregate(
     color_domain = list(sorted(df_count_class['class'].unique()))
     color_range = [Tableau_20.hex_colors[i] for i in range(len(color_domain))]
         
-    x = alt.X("class:O", axis=alt.Axis(title="Classification", labelExpr="split(datum.value, '.')[1]"))
     color = alt.Color(
         "class:O", 
         legend=None, 
@@ -600,11 +605,15 @@ def chart_bin_count_value_aggregate(
     s = value_field.capitalize()
     base_count_class = (
         alt.Chart(
-            df_count_class, 
-            width=width, 
-            title=f"Count Addresses by Classification"
+            df_count_class, width=width, height=height, title=f"Count Addresses by Classification"
         )
-        .encode(x=x, y=alt.Y("count:Q", axis=alt.Axis(title="Unique Addresses")))
+        .encode(
+            x=alt.X(
+                "class:O", 
+                axis=None 
+            ), 
+            y=alt.Y("count:Q", axis=alt.Axis(title="Unique Addresses"))
+        )
     )
     chart_count_class_histogram = (
         base_count_class
@@ -627,8 +636,13 @@ def chart_bin_count_value_aggregate(
 
     # Chart class value 
     base_class_value = (
-        alt.Chart(df_class_value, width=width, title=f"Cumulative {s} by Classification")
-        .encode(x=x, y=alt.Y(f"{value_field}:Q", axis=alt.Axis(title=s)))
+        alt.Chart(
+            df_class_value, width=width, height=height, title=f"Cumulative {s} by Classification"
+        )
+        .encode(
+            x=alt.X("class:O", axis=alt.Axis(title="Classification", labelExpr="split(datum.value, '.')[1]")), 
+            y=alt.Y(f"{value_field}:Q", axis=alt.Axis(title=s, format=".2s"))
+        )
     )
     chart_class_value_histogram = (
         base_class_value
@@ -645,11 +659,11 @@ def chart_bin_count_value_aggregate(
             stroke=alt.value("black"), 
             strokeWidth=alt.condition(selection, alt.value(.6), alt.value(0)),
         )
-        .mark_text(color='black', dy=-10)
+        .mark_text(color='black', dy=-5)
     )
 
     c = (
-        alt.hconcat(
+        alt.vconcat(
             alt.layer(chart_count_class_histogram, chart_count_class_text).add_selection(selection), 
             alt.layer(chart_class_value_histogram, chart_class_value_text).add_selection(selection), 
         )
