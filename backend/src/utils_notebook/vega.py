@@ -1,9 +1,11 @@
 import json
 import builtins 
+from functools import partial
 from typing import Optional, List 
 
 import altair as alt 
 import pandas as pd 
+from palettable.tableau import Tableau_10
 from IPython.display import JSON, display, HTML 
 from deepdiff import DeepSearch
 from deepdiff.path import _path_to_elements
@@ -460,3 +462,200 @@ def chart(
             .resolve_axis(y="independent")
         )
     return c if not return_selection else (c, selection_nearest)
+
+
+def chart_address_value_table(
+    df: pd.DataFrame, 
+    value_field: str, 
+    nrows=15
+):
+    radio_sort_dir = alt.binding_radio(name="Sort Direction:", options=['asc', 'desc'])
+    slider = alt.binding_range(min=1, max=len(df) - nrows, step=1, name='Scroll Offset:')
+    select_scroll = alt.selection_single(
+        name="scroller", fields=['offset'], bind=slider, init={'offset': 1}
+    )
+    select_radio_sort_dir = alt.selection_single(
+        name="sortdir", fields=["sort_dir"], bind=radio_sort_dir, init={"sort_dir": "desc"}
+    )
+
+    table_base = (
+        alt.Chart(df)
+        .transform_joinaggregate(rc="count(*)")
+        .transform_window(sort=[{"field": value_field}], frame=[None, 0], sort_field="row_number(*)")
+        .transform_calculate(sort_num="sortdir.sort_dir[0] === 'asc' ? datum.sort_field : (datum.rc - datum.sort_field + 1)")
+        .transform_fold(['address', value_field])
+        .transform_filter(
+            f"""
+            datum.sort_num >= parseInt(scroller.offset)
+            && datum.sort_num < (parseInt(scroller.offset) + {nrows})
+            """
+        )
+        .encode(
+            x=alt.X(
+                "key:N", 
+                axis=alt.Axis(
+                    orient="top", 
+                    labelAngle=0, 
+                    title=None, 
+                    domain=False, 
+                    ticks=False, 
+                    labelFontWeight=600, 
+                    labelFontSize=12
+                ), 
+            ),
+            y=alt.Y("sort_num:O", axis=None), 
+        )
+    ) 
+
+    table_rect = (
+        table_base
+        .mark_rect(stroke="black")
+        .encode(
+            color=alt.condition("datum.sort_num % 2 === 0", alt.value("#e3e3e3"), alt.value("#ffffff")), 
+            href="href"
+        )
+    ) 
+    table_text = (
+        table_base
+        .transform_calculate(
+            # label="datum.value"
+            label=f"""
+            datum.key === 'address' ? datum.value : 
+            datum.key === '{value_field}' ? format(datum.value, ',d') : 
+            datum.value 
+            """
+        )
+        .mark_text()
+        .encode(text='label:N')
+    ) 
+
+    c = (
+        alt.layer(table_rect, table_text)
+        .add_selection(select_scroll, select_radio_sort_dir)
+        .properties(width=750)
+    )
+    return c 
+
+
+from typing import List 
+from functools import partial
+
+def chart_bin_count_value_aggregate(
+    df: pd.DataFrame, 
+    value_field: str, 
+    breakpoints: List[float], 
+    width: int = 500, 
+): 
+    def classify(order, value):
+        for i in range(1, len(breakpoints)):
+            b0 = breakpoints[i-1] 
+            b1 = breakpoints[i]
+            if b0 <= value < b1: 
+                if order: 
+                    return i 
+                else: 
+                    if b1 == float('inf'): 
+                        return f"{int(b0):,}+ {value_field}"
+                    else: 
+                        return f"{int(b0):,} - {int(b1):,} {value_field}"
+            
+    # pre-processing 
+    df_class_order = pd.DataFrame(data=[
+        {'class': classify(False, breakpoints[i]), 'order': i}   
+        for i in range(len(breakpoints))
+    ]) 
+    df = df.groupby(by="address").sum().reset_index()
+    df['class'] = df[value_field].apply(partial(classify, False))
+    df['order'] = df[value_field].apply(partial(classify, True))
+    df = df.sort_values(value_field).reset_index(drop=True)
+    df = df.dropna(subset="class")
+    
+    # Get the count of pod holders by classification 
+    df_count_class = (
+        df[['class', value_field]]
+        .groupby('class').count()
+        .reset_index()
+        .merge(df_class_order, how="left", on="class")
+        .rename(columns={value_field: "count"})
+    )
+    # Sum value held by each class of holders 
+    df_class_value = (
+        df[['class', value_field]]
+        .groupby('class').sum()
+        .reset_index()
+        .merge(df_class_order, how="left", on="class")
+    )
+    
+    color_domain = list(sorted(df_count_class['class'].unique()))
+    color_range = [Tableau_10.hex_colors[i] for i in range(len(color_domain))]
+    
+    x = alt.X("class:O", sort=alt.SortField("order"), axis=alt.Axis(title="Classification"))
+    color = alt.Color(
+        "class:O", 
+        legend=None, 
+        scale=alt.Scale(domain=color_domain, range=color_range)
+    )
+    selection = alt.selection_single(
+        encodings=['x'], nearest=True, on='mouseover', empty='none', clear='mouseout'
+    )
+
+    # Chart count class 
+    s = value_field.capitalize()
+    base_count_class = (
+        alt.Chart(
+            df_count_class, 
+            width=width, 
+            title=f"Count Addresses by Classification"
+        )
+        .mark_bar()
+        .encode(x=x, y=alt.Y("count:Q", axis=alt.Axis(title="Unique Addresses")))
+    )
+    chart_count_class_histogram = (
+        base_count_class
+        .encode(
+            color=color, 
+            stroke=alt.condition(selection, alt.value("black"), alt.value("white"))
+        )
+        .mark_bar()
+    )
+    chart_count_class_text = (
+        base_count_class
+        .encode(
+            text=alt.Text("count:Q", format=",d"),
+            stroke=alt.value("black"), 
+            strokeWidth=alt.condition(selection, alt.value(.6), alt.value(0)),
+        )
+        .mark_text(color='black', dy=-10)
+    )
+
+    # Chart class value 
+    base_class_value = (
+        alt.Chart(df_class_value, width=width, title=f"Cumulative {s} by Classification")
+        .mark_bar()
+        .encode(x=x, y=alt.Y(f"{value_field}:Q", axis=alt.Axis(title=s)))
+    )
+    chart_class_value_histogram = (
+        base_class_value
+        .encode(
+            color=color,
+            stroke=alt.condition(selection, alt.value("black"), alt.value("white")),
+        )
+        .mark_bar()
+    )
+    chart_class_value_text = (
+        base_class_value
+        .encode(
+            text=alt.Text(f"{value_field}:Q", format=".3s"),
+            stroke=alt.value("black"), 
+            strokeWidth=alt.condition(selection, alt.value(.6), alt.value(0)),
+        )
+        .mark_text(color='black', dy=-10)
+    )
+
+    c = (
+        alt.hconcat(
+            alt.layer(chart_count_class_histogram, chart_count_class_text).add_selection(selection), 
+            alt.layer(chart_class_value_histogram, chart_class_value_text).add_selection(selection), 
+        )
+    )
+    return c 
