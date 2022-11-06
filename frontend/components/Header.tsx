@@ -48,6 +48,12 @@ const Header : React.FC<{}> = () => {
         <NavLink href="/market">
           Market
         </NavLink>
+        <NavLink href="/silo_members">
+          Silo Members
+        </NavLink>
+        <NavLink href="/pod_holders">
+          Pod Holders
+        </NavLink>
       </div>
       <div className="hidden md:flex items-center justify-end">
         <a href="https://app.bean.money" target="_blank" rel="noreferrer">

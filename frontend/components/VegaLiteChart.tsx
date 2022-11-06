@@ -254,6 +254,7 @@ const VegaLiteChart: React.FC<VegaLiteChartProps> = ({
       data={data} 
       height={height} 
       className={className}
+      actions={false}
       tooltip={theme} // Note: this must be a stable reference across renders (i.e. state) to avoid weird rendering issues. 
       ></VegaLite>
       {!is_resizing ? null : <div className={`

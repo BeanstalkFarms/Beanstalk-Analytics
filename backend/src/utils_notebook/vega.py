@@ -5,7 +5,7 @@ from typing import Optional, List
 
 import altair as alt 
 import pandas as pd 
-from palettable.tableau import Tableau_10
+from palettable.tableau import Tableau_20
 from IPython.display import JSON, display, HTML 
 from deepdiff import DeepSearch
 from deepdiff.path import _path_to_elements
@@ -537,8 +537,12 @@ def chart_address_value_table(
     return c 
 
 
-from typing import List 
-from functools import partial
+def string_pad_int(value, fixed_length=3):
+    import math 
+    if value == 0: 
+        return '0' * fixed_length
+    return (fixed_length - math.floor(math.log10(value)) - 1) * '0' + str(value)
+
 
 def chart_bin_count_value_aggregate(
     df: pd.DataFrame, 
@@ -555,18 +559,13 @@ def chart_bin_count_value_aggregate(
                     return i 
                 else: 
                     if b1 == float('inf'): 
-                        return f"{int(b0):,}+ {value_field}"
+                        return f"{string_pad_int(i)}.{int(b0):,}+ {value_field}"
                     else: 
-                        return f"{int(b0):,} - {int(b1):,} {value_field}"
+                        return f"{string_pad_int(i)}.{int(b0):,} - {int(b1):,} {value_field}"
             
     # pre-processing 
-    df_class_order = pd.DataFrame(data=[
-        {'class': classify(False, breakpoints[i]), 'order': i}   
-        for i in range(len(breakpoints))
-    ]) 
     df = df.groupby(by="address").sum().reset_index()
     df['class'] = df[value_field].apply(partial(classify, False))
-    df['order'] = df[value_field].apply(partial(classify, True))
     df = df.sort_values(value_field).reset_index(drop=True)
     df = df.dropna(subset="class")
     
@@ -575,7 +574,6 @@ def chart_bin_count_value_aggregate(
         df[['class', value_field]]
         .groupby('class').count()
         .reset_index()
-        .merge(df_class_order, how="left", on="class")
         .rename(columns={value_field: "count"})
     )
     # Sum value held by each class of holders 
@@ -583,13 +581,12 @@ def chart_bin_count_value_aggregate(
         df[['class', value_field]]
         .groupby('class').sum()
         .reset_index()
-        .merge(df_class_order, how="left", on="class")
     )
-    
+
     color_domain = list(sorted(df_count_class['class'].unique()))
-    color_range = [Tableau_10.hex_colors[i] for i in range(len(color_domain))]
-    
-    x = alt.X("class:O", sort=alt.SortField("order"), axis=alt.Axis(title="Classification"))
+    color_range = [Tableau_20.hex_colors[i] for i in range(len(color_domain))]
+        
+    x = alt.X("class:O", axis=alt.Axis(title="Classification", labelExpr="split(datum.value, '.')[1]"))
     color = alt.Color(
         "class:O", 
         legend=None, 
@@ -607,7 +604,6 @@ def chart_bin_count_value_aggregate(
             width=width, 
             title=f"Count Addresses by Classification"
         )
-        .mark_bar()
         .encode(x=x, y=alt.Y("count:Q", axis=alt.Axis(title="Unique Addresses")))
     )
     chart_count_class_histogram = (
@@ -624,6 +620,7 @@ def chart_bin_count_value_aggregate(
             text=alt.Text("count:Q", format=",d"),
             stroke=alt.value("black"), 
             strokeWidth=alt.condition(selection, alt.value(.6), alt.value(0)),
+            color=alt.value("black")
         )
         .mark_text(color='black', dy=-10)
     )
@@ -631,7 +628,6 @@ def chart_bin_count_value_aggregate(
     # Chart class value 
     base_class_value = (
         alt.Chart(df_class_value, width=width, title=f"Cumulative {s} by Classification")
-        .mark_bar()
         .encode(x=x, y=alt.Y(f"{value_field}:Q", axis=alt.Axis(title=s)))
     )
     chart_class_value_histogram = (
