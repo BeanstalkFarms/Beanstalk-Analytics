@@ -14,6 +14,7 @@ Priorities are assigned low (1) to high (5)
 
 - Figure out what to display in the callout's while they are loading data.  
 - Fix issue where callouts are constantly re-loading data. 
+- Fix spacing issue on the field page. 
 
 ## Infrastructure 
 
