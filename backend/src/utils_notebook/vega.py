@@ -230,6 +230,9 @@ def chart(
     xaxis_kwargs_override: bool = False, 
     yaxis_left_kwargs: dict = None, 
     yaxis_right_kwargs: dict = None, 
+    # Legend parameters 
+    hide_legend: bool = False, 
+    legend_kwargs = None, 
     # Chart parameters 
     title: str = '', 
     colors = None,      
@@ -240,7 +243,6 @@ def chart(
     show_exploit_rule: bool = True, 
     exploit_day: int = 17, # must be either 16 or 17
     width: int = 700, 
-    hide_legend: bool = False, 
     selection_nearest: alt.selection = None, 
     create_selection: bool = True, 
     add_selection: bool = True, 
@@ -264,6 +266,7 @@ def chart(
     rmark_kwargs = rmark_kwargs or {}
     l_yscales = l_yscales or {}
     r_yscales = r_yscales or {}
+    legend_kwargs = legend_kwargs or dict(title=None)
     # Selection for nearest point. We either use an existing instance passed in by the user 
     # or create a new instance. Using an existing instance allows a selection to be shared 
     # across charts, which can be useful for creating interactions between linked views 
@@ -294,7 +297,11 @@ def chart(
     cbase = (
         base
         .encode(
-            color=alt.Color("variable:N", scale=color_scale, legend=None if hide_legend else alt.Legend(title=None)), 
+            color=alt.Color(
+                "variable:N", 
+                scale=color_scale, 
+                legend=None if hide_legend else alt.Legend(**legend_kwargs)
+            ), 
             order=alt.Order('stack_order:Q', sort='ascending'),
         )
     )
