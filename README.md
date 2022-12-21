@@ -1,6 +1,6 @@
-<img src="public/bean-logo-circled.svg" alt="Beanstalk logo" align="right" width="120" />
+<img src="https://github.com/BeanstalkFarms/Beanstalk-Brand-Assets/blob/main/BEAN/bean-128x128.png" alt="Beanstalk logo" align="right" width="120" />
 
-# Beanstalk-Data-Playground
+# Beanstalk Analytics
 
 [![Discord][discord-badge]][discord-url]
 
