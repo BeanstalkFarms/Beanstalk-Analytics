@@ -15,6 +15,26 @@ type ModuleSlot = [
   desc?: string,
 ];
 
+function parseSlot(
+  slot: ModuleSlot,
+  data: any[] | null,
+  index: number,
+): string | null {
+  /** expanded? */
+  const [name, method, parseResult, args, desc] = slot;
+
+  let s: string;
+  if (data && data[index] !== undefined) {
+    if (parseResult) {
+      s = parseResult(data[index]);
+    } else {
+      s = data[index].toString()
+    }
+  }
+  return s; 
+
+}
+
 const Slot = ({
   slot,
   data,
@@ -100,19 +120,14 @@ const Slot = ({
   );
 }
 
-const CallsModule : React.FC<{
-  title: string;
-  slots: ModuleSlot[];
-  raw?: boolean;
-  multicall?: boolean;
-}> = ({
-  title,
-  slots,
-  raw = false,
-  multicall = true,
-}) => {
+function useContractData(
+  slots: ModuleSlot[],
+  raw?: boolean,
+  multicall?: boolean
+): { data: null | any[], status: 'loading' | 'ready' } {
   const [data, setData] = useState<null | any[]>(null);
   const [status, setStatus] = useState<'loading' | 'ready'>('loading');
+
   useEffect(() => {
     (async () => {
       try {
@@ -131,7 +146,7 @@ const CallsModule : React.FC<{
             slots
               .map(slot => {
                 const args = (slot[3] || []);
-                console.log(contracts.beanstalk[slot[1]](...args))
+                // console.log(contracts.beanstalk[slot[1]](...args))
                 return (contracts.beanstalk[slot[1]](...args) as Promise<any>).catch((err) => {
                   console.error(err);
                   return null;
@@ -145,7 +160,24 @@ const CallsModule : React.FC<{
         console.error(err);
       }
     })()
-  }, [multicall, slots])
+  }, [multicall, slots]);
+
+  return { data, status };
+  
+}
+
+const CallsModule : React.FC<{
+  title: string;
+  slots: ModuleSlot[];
+  raw?: boolean;
+  multicall?: boolean;
+}> = ({
+  title,
+  slots,
+  raw = false,
+  multicall = true,
+}) => {
+  const { data, status } = useContractData(slots, raw, multicall);
   return (
     <Module title={title}>
       {slots.map((slot, index) => (
@@ -161,4 +193,4 @@ const CallsModule : React.FC<{
   )
 }
 
-export default CallsModule;
+export { CallsModule, useContractData, ModuleSlot, parseSlot }; 

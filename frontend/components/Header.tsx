@@ -30,8 +30,8 @@ const Header : React.FC<{}> = () => {
             <span className="no-underline bg-slate-200 color-white px-2 py-0.5 rounded-md text-[10px]">BETA</span>
           </a>
         </Link>
-        <NavLink href="/credit-profile">
-          Credit Profile
+        <NavLink href="/overview">
+          Overview
         </NavLink>
         <NavLink href="/liquidity">
           Liquidity
@@ -47,6 +47,12 @@ const Header : React.FC<{}> = () => {
         </NavLink>
         <NavLink href="/market">
           Market
+        </NavLink>
+        <NavLink href="/silo_members">
+          Silo Members
+        </NavLink>
+        <NavLink href="/pod_holders">
+          Pod Holders
         </NavLink>
       </div>
       <div className="hidden md:flex items-center justify-end">

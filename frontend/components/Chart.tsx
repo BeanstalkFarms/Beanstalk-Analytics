@@ -11,6 +11,7 @@ import useSize from '@react-hook/size';
 
 const RECOMPUTE_SPEC_AGE_SECONDS = 1; 
 const SPEC_MAX_AGE_MINUTES = 15; 
+const FORCE_REFRESH = false; 
 const ARTIFICIAL_DELAY = false; 
 
 const urlBucket = new URL(`${process.env.NEXT_PUBLIC_CDN}/${process.env.NEXT_PUBLIC_STORAGE_BUCKET_NAME}`);
@@ -399,7 +400,11 @@ const Chart : React.FC<{
         if (!first_request_success) {
           // (4)
           try {
-            const res = await fetch(urlApiName(name).toString(), {"headers": headers })
+            let url = urlApiName(name).toString(); 
+            if (FORCE_REFRESH) {
+              url += `&force_refresh=true`; 
+            }
+            const res = await fetch(url, {"headers": headers})
               .then(r => r.json());
             const { status } = res[name.toLowerCase()]; 
             if (status !== 'recomputed' && status !== 'use_cached') {

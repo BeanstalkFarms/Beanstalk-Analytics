@@ -2,8 +2,6 @@
 
 Priorities are assigned low (1) to high (5)
 
-Any priority **3** or greater should be completed before v1 launch. 
-
 ## Frontend
 
 - **(2)** Fix css styling of tooltips. Can be done through custom vegaEmbed themes but this 
@@ -13,6 +11,10 @@ Any priority **3** or greater should be completed before v1 launch.
 ## Serverless API 
 
 ## Charts 
+
+- Figure out what to display in the callout's while they are loading data.  
+- Fix issue where callouts are constantly re-loading data. 
+- Fix spacing issue on the field page. 
 
 ## Infrastructure 
 

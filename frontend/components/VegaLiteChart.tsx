@@ -153,6 +153,40 @@ interface VegaLiteChartProps {
   setResizing: (new_is_resizing: boolean) => void 
 }; 
 
+const localizeCss = (uid: string, css: string | null): string | null => {
+  let cssProcessed = css; 
+  if (cssProcessed) {
+    let cssParts = cssProcessed.split(/[{}]/).filter(String); 
+    if (cssParts.length % 2 !== 0) {
+      cssParts.pop(); 
+    }
+    cssParts = cssParts.map(function(s, i) {
+      if (i % 2 === 0) {
+        // Is selector 
+        if (s.includes("vg-tooltip-element")) {
+          // Tooltip selector 
+          return (
+            s.trim() 
+            .split(/\s+/)
+            .map(t => (
+              t.includes("vg-tooltip-element") ? `${t}.${uid}-theme` : t 
+            ))
+            .join(" ")
+          );
+        } else {
+          // Non-tooltip selector 
+          return `#${uid} ${s.trim()}`
+        }
+      } else {
+        // Is rule 
+        return `{${s.trim()}}\n`
+      }
+    }); 
+    cssProcessed = cssParts.join("\n"); 
+  }
+  return cssProcessed
+}
+
 const VegaLiteChart: React.FC<VegaLiteChartProps> = ({ 
   name, spec, width_paths, height, target_width, css, setResizing, className
 }) => {
@@ -160,9 +194,10 @@ const VegaLiteChart: React.FC<VegaLiteChartProps> = ({
   const spec_no_data = cloneDeep(omit(spec, 'datasets')); 
   // @ts-ignore
   const data = spec['datasets'];
+  const uid = `vega-lite-chart-${name}`;  
   
   const ref_wrapper = useRef<HTMLDivElement>(null); 
-  const [uid, setUid] = useState<string>("uid" + Math.random().toString(10).split(".")[1]); 
+  const [theme, setTheme] = useState<{theme: string}>({"theme": uid}); 
   const [w, h] = useSize(ref_wrapper);
   const [resize_toggle, set_resize_toggle] = useState<boolean>(false); 
   const [state, dispatch] = useReducer(reducer, { 
@@ -203,40 +238,24 @@ const VegaLiteChart: React.FC<VegaLiteChartProps> = ({
     target_width === w_target && !is_too_small(w, w_target) && !is_too_large(w, w_target)
   );
 
-  // const uid = "catdog"; 
-  // console.log(uid); 
-  let useCss = css; 
-  if (useCss) {
-    let cssParts = useCss.split(/[{}]/).filter(String); 
-    if (cssParts.length % 2 !== 0) {
-      cssParts.pop(); 
-    }
-    cssParts = cssParts.map(function(s, i) {
-      if (i % 2 === 0) {
-        return `#${uid} ${s.trim()} `; 
-      } else {
-        return `{${s.trim()}}\n`
-      }
-    }); 
-    // cssParts.push(`#vg-tooltip-element.vg-tooltip.catdog-theme {
-    //   color: red;
-    // }`)
-    useCss = cssParts.join(""); 
-  }
+  // Process CSS received from the server. 
+  // Localize all styles, the way we do this differs between tooltip vs non-tooltip styles. 
+  const cssProcessed = localizeCss(uid, css); 
 
   // Set to true to see effects of dynamic resizing. Only for debugging issues. 
   const debug_resizing = false; 
 
   // Z-index of 1001 required to hide action button 
   return <React.Fragment>
-    {useCss ? <style>{useCss}</style> : null} 
+    {cssProcessed ? <style>{cssProcessed}</style> : null} 
     <div id={uid} ref={ref_wrapper} className="relative">
       <VegaLite 
-      spec={cloneDeep(vega_lite_spec)} 
+      spec={cloneDeep(vega_lite_spec)} // TODO: is this necessary? 
       data={data} 
       height={height} 
       className={className}
-      // tooltip={{"theme": uid}} // when this is included, weird stuff happens 
+      actions={false}
+      tooltip={theme} // Note: this must be a stable reference across renders (i.e. state) to avoid weird rendering issues. 
       ></VegaLite>
       {!is_resizing ? null : <div className={`
       absolute top-0 left-0 w-full h-full ${debug_resizing ? 'bg-red-500' : 'bg-white'} 

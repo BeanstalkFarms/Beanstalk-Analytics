@@ -1,4 +1,5 @@
 import os 
+import re 
 from typing import Tuple, Dict, List
 
 from subgrounds.subgrounds import Subgrounds, Subgraph
@@ -9,16 +10,27 @@ from IPython.core.display import HTML
 from .constants import ADDRS_SILO_TOKENS, DECIMALS_SILO_TOKENS
 
 
+def camel_to_snake(name):
+    name = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
+    return re.sub('([a-z0-9])([A-Z])', r'\1_\2', name).lower()
+
+def camel_to_snake_cols(df): 
+    return df.rename(columns={col: camel_to_snake(col) for col in df.columns})
+    
+
 def is_number(v): 
     return type(v) == int or type(v) == float 
+
 
 def dict_invert(d: Dict): 
     """Inverts the key value mapping of a dict."""
     return {v: k for k, v in d.items()}
 
+
 def remove_keys(d: Dict, rm_keys): 
     """Returns dict with all keys in rm_keys removed."""
     return {k: v for k, v in d.items() if k not in rm_keys}
+
 
 def all_attrs(obj, ignore_keys=None): 
     """Retrieves list of all non private / builtin attributes of an object.

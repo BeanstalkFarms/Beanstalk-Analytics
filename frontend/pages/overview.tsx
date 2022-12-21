@@ -4,9 +4,9 @@ import React from 'react';
 import Page from "../components/Page";
 import Chart from "../components/Chart"; 
 
-const CreditProfile: NextPage = () => {
+const OverviewPage: NextPage = () => {
   return (
-    <Page title="Credit Profile">
+    <Page title="Overview">
       <Chart
         title="Credit Profile"
         name="credit_profile"
@@ -16,4 +16,4 @@ const CreditProfile: NextPage = () => {
   );
 }
 
-export default CreditProfile;
+export default OverviewPage;
