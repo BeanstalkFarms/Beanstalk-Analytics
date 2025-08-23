@@ -2,9 +2,6 @@
 
 # Beanstalk Analytics
 
-[![Discord][discord-badge]][discord-url]
-
-[discord-badge]: https://img.shields.io/discord/880413392916054098?label=Beanstalk
 **Beanstalk analytics and protocol metrics: [analytics.bean.money](https://analytics.bean.money)**
 
 ## Application Architecture 
